@@ -1,0 +1,20 @@
+# Skill packs are read by AI agents at runtime, not part of the build
+.agents/
+
+# Reference prototype kept for client onboarding (not part of the build)
+doc/
+
+# Generated migrations
+migrations/
+
+# Build artifacts
+.next/
+out/
+coverage/
+storybook-static/
+playwright-report/
+test-results/
+
+# Removed boilerplate showcase
+src/components/Hello.tsx
+src/components/Sponsors.tsx

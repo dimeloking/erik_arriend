@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Casero — control de arriendos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['DM Sans', 'system-ui', 'sans-serif'],
+              serif: ['Fraunces', 'Georgia', 'serif'],
+              mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+            },
+            colors: {
+              cream: { 50: '#fbf8f2', 100: '#f7f1e6', 200: '#ece5da', 300: '#ddd2c1' },
+              ink: {
+                900: '#2d2a26',
+                700: '#4f4a42',
+                500: '#7a7368',
+                400: '#9b9387',
+                300: '#bfb7a8',
+              },
+              mint: {
+                50: '#eaf5ed',
+                100: '#d4ecd9',
+                200: '#b4d9bb',
+                500: '#6fa37b',
+                700: '#4a7a55',
+              },
+              peach: {
+                50: '#faecdf',
+                100: '#f4d4c2',
+                200: '#ecb89d',
+                500: '#c98863',
+                700: '#985f3c',
+              },
+              lavender: {
+                50: '#efe9f5',
+                100: '#dcd1ec',
+                200: '#c4b3df',
+                500: '#8b76b8',
+                700: '#604c8a',
+              },
+              sky: {
+                50: '#e6eff4',
+                100: '#c8dde8',
+                200: '#a3c2d3',
+                500: '#5d8aa3',
+                700: '#3f6075',
+              },
+              rose: { 50: '#f7e6e6', 100: '#eccaca', 500: '#b87878' },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html,
+      body {
+        background: #fbf8f2;
+        color: #2d2a26;
+      }
+      body {
+        font-family: 'DM Sans', system-ui, sans-serif;
+      }
+      .num {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-feature-settings: 'tnum';
+      }
+      .serif {
+        font-family: 'Fraunces', Georgia, serif;
+        font-optical-sizing: auto;
+      }
+      /* subtle scrollbar */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #ddd2c1;
+        border-radius: 999px;
+        border: 2px solid #fbf8f2;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* fade-in */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .fade-up {
+        animation: fadeUp 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .fade-in {
+        animation: fadeIn 0.25s ease both;
+      }
+
+      .grid-paper {
+        background-image:
+          linear-gradient(to right, rgba(45, 42, 38, 0.04) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(45, 42, 38, 0.04) 1px, transparent 1px);
+        background-size: 28px 28px;
+      }
+      .ring-soft {
+        box-shadow:
+          0 1px 0 rgba(45, 42, 38, 0.04),
+          0 8px 24px -16px rgba(45, 42, 38, 0.18);
+      }
+      .btn-primary {
+        background: var(--accent-700, #4a7a55);
+      }
+      .btn-primary:hover {
+        filter: brightness(1.05);
+      }
+      .chip-mint {
+        background: #d4ecd9;
+        color: #2f5a3a;
+      }
+      .chip-peach {
+        background: #f4d4c2;
+        color: #6e3f23;
+      }
+      .chip-lavender {
+        background: #dcd1ec;
+        color: #4a3776;
+      }
+      .chip-sky {
+        background: #c8dde8;
+        color: #2c4a5b;
+      }
+      .chip-rose {
+        background: #eccaca;
+        color: #6e3939;
+      }
+
+      /* Reset Tailwind forms plugin default borders so our wrappers control the chrome */
+      input[type='text'],
+      input[type='email'],
+      input[type='password'],
+      input[type='date'],
+      input[type='number'],
+      input[type='tel'],
+      input[type='search'],
+      textarea,
+      select {
+        border: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        --tw-ring-shadow: 0 0 #0000;
+        --tw-ring-offset-shadow: 0 0 #0000;
+        background: transparent;
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+      input[type='date']::-webkit-calendar-picker-indicator {
+        opacity: 0.5;
+        cursor: pointer;
+      }
+    </style>
+
+    <!-- React + Babel pinned -->
+    <script
+      src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+      integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+      integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+      integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+
+    <script src="data.js"></script>
+    <script type="text/babel" src="tweaks-panel.jsx"></script>
+    <script type="text/babel" src="components.jsx"></script>
+    <script type="text/babel" src="app.jsx"></script>
+  </body>
+</html>
