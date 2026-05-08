@@ -1,7 +1,16 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import { setRequestLocale } from 'next-intl/server';
-import { routing } from '@/libs/I18nRouting';
+import { Env } from '@/libs/Env';
 import { ClerkLocalizations } from '@/utils/AppConfig';
+import { getI18nPath } from '@/utils/Helpers';
+
+const getLocalizedClerkUrl = (url: string, locale: string) => {
+  if (!url.startsWith('/') || url.startsWith('//')) {
+    return url;
+  }
+
+  return getI18nPath(url, locale);
+};
 
 export default async function AuthLayout(props: {
   children: React.ReactNode;
@@ -13,15 +22,11 @@ export default async function AuthLayout(props: {
   const clerkLocale =
     ClerkLocalizations.supportedLocales[locale] ?? ClerkLocalizations.defaultLocale;
 
-  let signInUrl = '/sign-in';
-  let dashboardUrl = '/dashboard';
-  let afterSignOutUrl = '/';
-
-  if (locale !== routing.defaultLocale) {
-    signInUrl = `/${locale}${signInUrl}`;
-    dashboardUrl = `/${locale}${dashboardUrl}`;
-    afterSignOutUrl = `/${locale}${afterSignOutUrl}`;
-  }
+  const signInUrl = getLocalizedClerkUrl(Env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? '/sign-in', locale);
+  const signInFallbackRedirectUrl = getLocalizedClerkUrl(
+    Env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL ?? '/dashboard',
+    locale,
+  );
 
   return (
     <ClerkProvider
@@ -30,8 +35,8 @@ export default async function AuthLayout(props: {
       }}
       localization={clerkLocale}
       signInUrl={signInUrl}
-      signInFallbackRedirectUrl={dashboardUrl}
-      afterSignOutUrl={afterSignOutUrl}
+      signInFallbackRedirectUrl={signInFallbackRedirectUrl}
+      afterSignOutUrl={signInUrl}
     >
       {props.children}
     </ClerkProvider>

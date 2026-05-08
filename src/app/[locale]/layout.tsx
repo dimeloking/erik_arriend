@@ -3,7 +3,6 @@ import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { DM_Sans, Fraunces, JetBrains_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
-import { DemoBadge } from '@/components/DemoBadge';
 import { routing } from '@/libs/I18nRouting';
 import '@/styles/global.css';
 
@@ -77,11 +76,7 @@ export default async function RootLayout(props: {
       className={`${dmSans.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        <NextIntlClientProvider>
-          {props.children}
-
-          <DemoBadge />
-        </NextIntlClientProvider>
+        <NextIntlClientProvider>{props.children}</NextIntlClientProvider>
       </body>
     </html>
   );
