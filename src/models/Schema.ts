@@ -2,7 +2,6 @@ import {
   index,
   integer,
   pgTable,
-  serial,
   text,
   timestamp,
   uniqueIndex,
@@ -13,19 +12,6 @@ import {
 // To modify the database schema:
 // 1. Update this file with your desired changes.
 // 2. Generate a new migration by running: `npm run db:generate`
-
-// Need a database for production? Check out https://get.neon.com/BMFYNtx
-// Tested and compatible with Next.js Boilerplate
-
-export const counterSchema = pgTable('counter', {
-  id: serial('id').primaryKey(),
-  count: integer('count').default(0),
-  updatedAt: timestamp('updated_at', { mode: 'date' })
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
-});
 
 // Casero — control de arriendos
 
@@ -41,6 +27,7 @@ export const propertySchema = pgTable(
     rentClp: integer('rent_clp').notNull(),
     depositClp: integer('deposit_clp').notNull().default(0),
     startDate: varchar('start_date', { length: 10 }).notNull(), // YYYY-MM-DD
+    paymentDay: integer('payment_day').notNull().default(5),
     contractMonths: integer('contract_months').notNull().default(12),
     increasePct: integer('increase_pct').notNull().default(0),
     increaseAnchor: varchar('increase_anchor', { length: 2 }).notNull().default('01'), // 01..12
@@ -79,4 +66,40 @@ export const paymentSchema = pgTable(
     index('payment_property_idx').on(table.propertyId),
     uniqueIndex('payment_property_month_uniq').on(table.propertyId, table.month),
   ],
+);
+
+export const balanceSnapshotSchema = pgTable(
+  'balance_snapshot',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: text('user_id').notNull(),
+    incomeClp: integer('income_clp').notNull().default(0),
+    expensesClp: integer('expenses_clp').notNull().default(0),
+    balanceClp: integer('balance_clp').notNull().default(0),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex('balance_snapshot_user_uniq').on(table.userId)],
+);
+
+export const expenseSchema = pgTable(
+  'expense',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: text('user_id').notNull(),
+    date: varchar('date', { length: 10 }).notNull(),
+    month: varchar('month', { length: 7 }).notNull(),
+    description: varchar('description', { length: 240 }).notNull(),
+    amountClp: integer('amount_clp').notNull(),
+    notes: text('notes'),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (table) => [index('expense_user_month_idx').on(table.userId, table.month)],
 );

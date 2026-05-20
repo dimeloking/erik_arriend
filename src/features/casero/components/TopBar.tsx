@@ -20,13 +20,21 @@ export const TopBar = async () => {
           </div>
           <div className="serif text-[20px] tracking-tight">Casero</div>
         </Link>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 hover:bg-cream-100"
+        <nav className="hidden items-center gap-1 rounded-full bg-white p-1 ring-soft md:flex">
+          <Link
+            href="/dashboard"
+            className="text-ink-600 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] transition hover:bg-cream-100 hover:text-ink-900"
           >
-            <Icon name="search" size={16} />
-          </button>
+            <Icon name="home" size={13} /> Panel
+          </Link>
+          <Link
+            href="/dashboard/balance"
+            className="text-ink-600 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] transition hover:bg-cream-100 hover:text-ink-900"
+          >
+            <Icon name="chart" size={13} /> Balance
+          </Link>
+        </nav>
+        <div className="flex items-center gap-2">
           <NotificationMenu notifications={notifications} />
           <div className="ml-1 flex items-center gap-2 border-l border-cream-200 pl-2">
             <UserButton

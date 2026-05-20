@@ -1,0 +1,6 @@
+[   10758ms] [LOG] [Client Instrumentation Hook] Slow execution detected: 59ms (Note: Code download overhead is not included in this measurement) @ http://localhost:3002/_next/static/chunks/node_modules_%40sentry_core_build_esm_01ow55u._.js:10988
+[   10792ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3002/_next/static/chunks/node_modules_%40sentry_core_build_esm_01ow55u._.js:10988
+[   10979ms] [LOG] [HMR] connected @ http://localhost:3002/_next/static/chunks/node_modules_%40sentry_core_build_esm_01ow55u._.js:10988
+[   11142ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3002/_next/static/chunks/node_modules_%40sentry_core_build_esm_01ow55u._.js:10988
+[   11159ms] [LOG] [Fast Refresh] done in 135ms @ http://localhost:3002/_next/static/chunks/node_modules_%40sentry_core_build_esm_01ow55u._.js:10988
+[   12209ms] [WARNING] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview @ http://localhost:3002/_next/static/chunks/node_modules_%40sentry_core_build_esm_01ow55u._.js:10988

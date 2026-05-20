@@ -2,25 +2,35 @@
 
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-import * as z from 'zod';
+import type * as z from 'zod';
 import { db } from '@/libs/DB';
-import { paymentSchema, propertySchema } from '@/models/Schema';
+import {
+  balanceSnapshotSchema,
+  expenseSchema,
+  paymentSchema,
+  propertySchema,
+} from '@/models/Schema';
 import { requireUserId } from './queries';
-import { SEED_PROPERTIES } from './seed-data';
-import { markPaidInputSchema, propertyInputSchema } from './validation';
+import {
+  balanceSnapshotInputSchema,
+  expenseInputSchema,
+  propertyInputSchema,
+  registerPaymentInputSchema,
+} from './validation';
 
 const computePaymentSeed = (input: {
   startDate: string;
   rentClp: number;
   increasePct: number;
   increaseAnchor: string;
+  paymentDay: number;
 }) => {
-  // Pre-genera pagos pendientes desde startDate hasta el mes actual.
+  // Pre-genera pagos pendientes solo hasta los meses que ya llegaron a su día de pago.
   const [startYear, startMonth] = input.startDate.split('-').map(Number);
   const today = new Date();
   const ty = today.getFullYear();
   const tm = today.getMonth() + 1;
+  const todayDate = new Date(ty, tm - 1, today.getDate());
 
   const months: { month: string; amountClp: number; status: 'pending' }[] = [];
   let amount = input.rentClp;
@@ -28,6 +38,14 @@ const computePaymentSeed = (input: {
   let m = startMonth ?? tm;
 
   while (y < ty || (y === ty && m <= tm)) {
+    const isStartMonth = y === (startYear ?? ty) && m === (startMonth ?? tm);
+    const startDay = Number(input.startDate.split('-')[2] ?? '1');
+    const dueDay = Math.min(input.paymentDay, new Date(y, m, 0).getDate());
+    const dueDate = new Date(y, m - 1, isStartMonth ? Math.max(startDay, dueDay) : dueDay);
+    if (dueDate > todayDate) {
+      break;
+    }
+
     // Aplica reajuste anual al cumplirse 12 meses + mes ancla
     if (y > (startYear ?? ty) && String(m).padStart(2, '0') === input.increaseAnchor) {
       amount = Math.round(amount * (1 + input.increasePct / 100));
@@ -47,7 +65,8 @@ const computePaymentSeed = (input: {
   return months;
 };
 
-const validationErrors = (error: z.ZodError) => z.treeifyError(error);
+const validationErrors = (error: z.ZodError) =>
+  error.issues.map((issue) => issue.message).filter((message) => message.length > 0);
 
 export const createProperty = async (formData: FormData) => {
   const userId = await requireUserId();
@@ -68,6 +87,7 @@ export const createProperty = async (formData: FormData) => {
       rentClp: data.rentClp,
       depositClp: data.depositClp,
       startDate: data.startDate,
+      paymentDay: data.paymentDay,
       contractMonths: data.contractMonths,
       increasePct: data.increasePct,
       increaseAnchor: data.increaseAnchor,
@@ -77,7 +97,7 @@ export const createProperty = async (formData: FormData) => {
     .returning({ id: propertySchema.id });
 
   if (!created) {
-    return { ok: false as const, errors: { _form: ['No se pudo crear la propiedad'] } };
+    return { ok: false as const, errors: ['No se pudo crear la propiedad'] };
   }
 
   const seed = computePaymentSeed(data);
@@ -93,7 +113,7 @@ export const createProperty = async (formData: FormData) => {
   }
 
   revalidatePath('/dashboard');
-  return redirect(`/dashboard/properties/${created.id}`);
+  return { ok: true as const, id: created.id };
 };
 
 export const updateProperty = async (propertyId: string, formData: FormData) => {
@@ -104,7 +124,7 @@ export const updateProperty = async (propertyId: string, formData: FormData) => 
   }
   const { data } = parsed;
 
-  await db
+  const [updated] = await db
     .update(propertySchema)
     .set({
       nickname: data.nickname,
@@ -114,28 +134,54 @@ export const updateProperty = async (propertyId: string, formData: FormData) => 
       rentClp: data.rentClp,
       depositClp: data.depositClp,
       startDate: data.startDate,
+      paymentDay: data.paymentDay,
       contractMonths: data.contractMonths,
       increasePct: data.increasePct,
       increaseAnchor: data.increaseAnchor,
       color: data.color,
       notes: data.notes ?? null,
     })
-    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)));
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .returning({ id: propertySchema.id });
+
+  if (!updated) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  await db
+    .update(paymentSchema)
+    .set({ amountClp: data.rentClp })
+    .where(and(eq(paymentSchema.propertyId, propertyId), eq(paymentSchema.status, 'pending')));
 
   revalidatePath('/dashboard');
   revalidatePath(`/dashboard/properties/${propertyId}`);
   return { ok: true as const };
 };
 
-export const markPaymentPaid = async (propertyId: string, formData: FormData) => {
+export const deleteProperty = async (propertyId: string) => {
   const userId = await requireUserId();
-  const parsed = markPaidInputSchema.safeParse(Object.fromEntries(formData));
+  const [deleted] = await db
+    .delete(propertySchema)
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .returning({ id: propertySchema.id });
+
+  if (!deleted) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/balance');
+  return { ok: true as const };
+};
+
+export const registerPayment = async (propertyId: string, formData: FormData) => {
+  const userId = await requireUserId();
+  const parsed = registerPaymentInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { ok: false as const, errors: validationErrors(parsed.error) };
   }
   const { data } = parsed;
 
-  // Verify ownership: payment.propertyId belongs to this user
   const [property] = await db
     .select({ id: propertySchema.id })
     .from(propertySchema)
@@ -143,64 +189,135 @@ export const markPaymentPaid = async (propertyId: string, formData: FormData) =>
     .limit(1);
 
   if (!property) {
-    return { ok: false as const, errors: { _form: ['Propiedad no encontrada'] } };
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
   }
 
-  await db
-    .update(paymentSchema)
-    .set({
-      status: 'paid',
-      paidOn: data.paidOn,
-      method: data.method,
+  try {
+    await db.insert(paymentSchema).values({
+      propertyId,
+      month: data.month,
+      amountClp: data.amountClp,
+      paidOn: data.status === 'paid' ? data.paidOn : null,
+      status: data.status,
+      method: data.status === 'paid' ? data.method : null,
       reference: data.reference ?? null,
       notes: data.notes ?? null,
-    })
-    .where(and(eq(paymentSchema.id, data.paymentId), eq(paymentSchema.propertyId, propertyId)));
+    });
+  } catch {
+    return {
+      ok: false as const,
+      errors: ['Ya existe un pago para ese mes. Usa Editar en el historial para corregirlo.'],
+    };
+  }
 
   revalidatePath('/dashboard');
   revalidatePath(`/dashboard/properties/${propertyId}`);
   return { ok: true as const };
 };
 
-export const seedDemoData = async () => {
+export const updatePayment = async (propertyId: string, paymentId: string, formData: FormData) => {
   const userId = await requireUserId();
-  for (const seed of SEED_PROPERTIES) {
-    const [created] = await db
-      .insert(propertySchema)
-      .values({
-        userId,
-        nickname: seed.nickname,
-        address: seed.address,
-        tenantName: seed.tenantName,
-        tenantPhone: seed.tenantPhone,
-        rentClp: seed.rent,
-        depositClp: seed.deposit,
-        startDate: seed.startDate,
-        contractMonths: seed.contractMonths,
-        increasePct: seed.increasePct,
-        increaseAnchor: seed.increaseAnchor,
-        color: seed.color,
-        notes: seed.notes,
-      })
-      .returning({ id: propertySchema.id });
+  const parsed = registerPaymentInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false as const, errors: validationErrors(parsed.error) };
+  }
+  const { data } = parsed;
 
-    if (!created) {
-      continue;
-    }
+  const [property] = await db
+    .select({ id: propertySchema.id })
+    .from(propertySchema)
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .limit(1);
 
-    if (seed.payments.length > 0) {
-      await db.insert(paymentSchema).values(
-        seed.payments.map((p) => ({
-          propertyId: created.id,
-          month: p.month,
-          amountClp: p.amount,
-          paidOn: p.paidOn,
-          status: p.status,
-        })),
-      );
-    }
+  if (!property) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
   }
 
+  try {
+    const [updated] = await db
+      .update(paymentSchema)
+      .set({
+        amountClp: data.amountClp,
+        month: data.month,
+        paidOn: data.status === 'paid' ? data.paidOn : null,
+        status: data.status,
+        method: data.status === 'paid' ? data.method : null,
+        reference: data.reference ?? null,
+        notes: data.notes ?? null,
+      })
+      .where(and(eq(paymentSchema.id, paymentId), eq(paymentSchema.propertyId, propertyId)))
+      .returning({ id: paymentSchema.id });
+
+    if (!updated) {
+      return { ok: false as const, errors: ['Pago no encontrado'] };
+    }
+  } catch {
+    return {
+      ok: false as const,
+      errors: ['No se pudo editar el pago. Revisa si ya existe otro pago para ese mes.'],
+    };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { ok: true as const };
+};
+
+export const updateBalanceSnapshot = async (formData: FormData) => {
+  const userId = await requireUserId();
+  const parsed = balanceSnapshotInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false as const, errors: validationErrors(parsed.error) };
+  }
+  const { data } = parsed;
+
+  await db
+    .insert(balanceSnapshotSchema)
+    .values({
+      userId,
+      incomeClp: data.incomeClp,
+      expensesClp: data.expensesClp,
+      balanceClp: data.balanceClp,
+    })
+    .onConflictDoUpdate({
+      target: balanceSnapshotSchema.userId,
+      set: {
+        incomeClp: data.incomeClp,
+        expensesClp: data.expensesClp,
+        balanceClp: data.balanceClp,
+      },
+    });
+
+  revalidatePath('/dashboard');
+  return { ok: true as const };
+};
+
+export const createExpense = async (formData: FormData) => {
+  const userId = await requireUserId();
+  const parsed = expenseInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false as const, errors: validationErrors(parsed.error) };
+  }
+  const { data } = parsed;
+
+  await db.insert(expenseSchema).values({
+    userId,
+    date: data.date,
+    month: data.date.slice(0, 7),
+    description: data.description,
+    amountClp: data.amountClp,
+    notes: data.notes ?? null,
+  });
+
+  revalidatePath('/dashboard');
+  return { ok: true as const };
+};
+
+export const deleteExpense = async (expenseId: string) => {
+  const userId = await requireUserId();
+  await db
+    .delete(expenseSchema)
+    .where(and(eq(expenseSchema.id, expenseId), eq(expenseSchema.userId, userId)));
   revalidatePath('/dashboard');
   return { ok: true as const };
 };

@@ -92,6 +92,14 @@ export const todayYM = () => {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
 };
 
+export const nextYM = (ym: string) => {
+  const [year, month] = ym.split('-').map(Number);
+  const nextMonth = month === 12 ? 1 : (month ?? 1) + 1;
+  const nextYear =
+    month === 12 ? (year ?? new Date().getFullYear()) + 1 : (year ?? new Date().getFullYear());
+  return `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+};
+
 export const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export type PaymentStatus = 'paid' | 'late' | 'pending' | 'overdue';

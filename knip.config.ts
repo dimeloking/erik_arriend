@@ -11,9 +11,6 @@ const config: KnipConfig = {
     '.agents/**',
     // Reference prototype kept for client onboarding (not part of build)
     'doc/**',
-    // Boilerplate showcase components no longer wired up
-    'src/components/Hello.tsx',
-    'src/components/Sponsors.tsx',
   ],
   // Dependencies to ignore during analysis
   ignoreDependencies: [

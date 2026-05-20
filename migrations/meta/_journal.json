@@ -15,6 +15,34 @@
       "when": 1778189721658,
       "tag": "0001_colossal_hellion",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778780447098,
+      "tag": "0002_abandoned_aqueduct",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778805591095,
+      "tag": "0003_lowly_mesmero",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778805934753,
+      "tag": "0004_lucky_rumiko_fujikawa",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779278953042,
+      "tag": "0005_clear_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

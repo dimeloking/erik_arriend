@@ -36,7 +36,7 @@ export const PropertyCard = (props: { property: PropertyWithPayments }) => {
         <div>
           <div className="text-[11px] tracking-[0.1em] text-ink-400 uppercase">Arriendo actual</div>
           <div className="mt-0.5 num text-[22px] text-ink-900">
-            {fmtCLP(current?.amountClp ?? p.rentClp)}
+            {fmtCLP(p.rentClp)}
             <span className="font-sans text-[13px] text-ink-400">/mes</span>
           </div>
         </div>

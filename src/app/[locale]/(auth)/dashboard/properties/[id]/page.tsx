@@ -6,7 +6,7 @@ import { getPropertyWithPayments } from '@/features/casero/queries';
 
 type PropertyPageProps = {
   params: Promise<{ locale: string; id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ paymentId?: string; tab?: string }>;
 };
 
 export const metadata: Metadata = {
@@ -31,5 +31,5 @@ export default async function PropertyPage(props: PropertyPageProps) {
   }
 
   const tab: Tab = isTab(sp.tab) ? sp.tab : 'historial';
-  return <PropertyDetail property={property} tab={tab} />;
+  return <PropertyDetail openPaymentId={sp.paymentId} property={property} tab={tab} />;
 }

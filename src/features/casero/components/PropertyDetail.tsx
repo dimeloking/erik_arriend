@@ -7,11 +7,13 @@ import {
   fmtMonthLong,
   getAccentKey,
   getPaymentStatus,
+  nextYM,
 } from '../lib';
 import type { PaymentRow, PropertyWithPayments } from '../queries';
 import { Icon } from '../ui/Icon';
 import { Avatar, Button, Card, StatusPill } from '../ui/primitives';
-import { MarkPaidForm } from './MarkPaidForm';
+import { DeletePropertyButton } from './DeletePropertyButton';
+import { PaymentRegistrationDialog } from './PaymentRegistrationDialog';
 
 type Tab = 'historial' | 'balance' | 'reajustes';
 
@@ -32,13 +34,21 @@ const groupByYear = (payments: PaymentRow[]) => {
   return g;
 };
 
-export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab }) => {
+export const PropertyDetail = (props: {
+  property: PropertyWithPayments;
+  tab: Tab;
+  openPaymentId?: string;
+}) => {
   const p = props.property;
   const { tab } = props;
   const colorKey = getAccentKey(p.color);
   const accent = ACCENTS[colorKey];
   const totalCollected = p.payments
     .filter((x) => x.status !== 'pending')
+    .reduce((s, x) => s + x.amountClp, 0);
+  const totalExpected = p.payments.reduce((s, x) => s + x.amountClp, 0);
+  const totalPending = p.payments
+    .filter((x) => x.status === 'pending')
     .reduce((s, x) => s + x.amountClp, 0);
   const pending = p.payments.filter((x) => x.status === 'pending');
   const yearGroups = groupByYear(p.payments);
@@ -82,24 +92,31 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
                   <Icon name="edit" size={13} /> Editar
                 </Button>
               </Link>
+              <PaymentRegistrationDialog
+                propertyId={p.id}
+                defaultMonth={
+                  pending[0]?.month ?? (last ? nextYM(last.month) : p.startDate.slice(0, 7))
+                }
+                defaultAmountClp={p.rentClp}
+                existingMonths={p.payments.map((payment) => payment.month)}
+              />
+              <DeletePropertyButton propertyId={p.id} propertyName={p.nickname} />
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
             <Card className="p-4">
               <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 Arriendo actual
               </div>
-              <div className="mt-1 num text-[22px] text-ink-900">
-                {fmtCLP(last?.amountClp ?? p.rentClp)}
-              </div>
+              <div className="mt-1 num text-[22px] text-ink-900">{fmtCLP(p.rentClp)}</div>
             </Card>
             <Card className="p-4">
               <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
                 Inicio contrato
               </div>
               <div className="mt-1 text-[15px] text-ink-900">{fmtDate(p.startDate)}</div>
-              <div className="text-[12px] text-ink-400">{p.contractMonths} meses</div>
+              <div className="text-[12px] text-ink-400">paga el día {p.paymentDay}</div>
             </Card>
             <Card className="p-4">
               <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
@@ -110,28 +127,32 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
                 cada {fmtMonthLong(`2025-${p.increaseAnchor}`).split(' ')[0]}
               </div>
             </Card>
-            <Card className="p-4">
-              <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">Garantía</div>
-              <div className="mt-1 num text-[22px] text-ink-900">{fmtCLP(p.depositClp)}</div>
-            </Card>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-cream-200 px-7 py-4">
-          <div className="flex items-center gap-3">
+        <div className="grid grid-cols-1 gap-4 border-t border-cream-200 px-7 py-4 md:grid-cols-[1fr_auto]">
+          <div className="flex min-w-0 items-center gap-3">
             <Avatar name={p.tenantName} color={colorKey} size={42} />
-            <div>
-              <div className="text-[15px] text-ink-900">{p.tenantName}</div>
-              <div className="flex items-center gap-3 text-[12.5px] text-ink-500">
+            <div className="min-w-0">
+              <div className="text-[11px] tracking-[0.1em] text-ink-400 uppercase">
+                Arrendatario
+              </div>
+              <div className="truncate text-[15px] text-ink-900">{p.tenantName}</div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-3 text-[12.5px] text-ink-500">
                 {p.tenantPhone && (
                   <span className="flex items-center gap-1">
-                    <Icon name="phone" size={12} /> {p.tenantPhone}
+                    <Icon name="phone" size={12} /> Teléfono: {p.tenantPhone}
                   </span>
                 )}
               </div>
             </div>
           </div>
-          {p.notes && <div className="max-w-md text-[12.5px] text-ink-500">{p.notes}</div>}
+          {p.notes && (
+            <div className="min-w-0 rounded-2xl bg-cream-50 px-4 py-3 md:max-w-md">
+              <div className="text-[11px] tracking-[0.1em] text-ink-400 uppercase">Notas</div>
+              <div className="text-ink-600 mt-1 text-[12.5px]">{p.notes}</div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -179,8 +200,19 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
                   <StatusPill status={getPaymentStatus(x.status)} />
                 </div>
                 <div className="col-span-3 num text-[13px] text-ink-700">{fmtDate(x.paidOn)}</div>
-                <div className="col-span-3 text-right num text-[15px] text-ink-900">
-                  {fmtCLP(x.amountClp)}
+                <div className="col-span-3 flex items-center justify-end gap-2 text-right">
+                  <span className="num text-[15px] text-ink-900">{fmtCLP(x.amountClp)}</span>
+                  <PaymentRegistrationDialog
+                    propertyId={p.id}
+                    defaultMonth={x.month}
+                    defaultAmountClp={x.amountClp}
+                    existingMonths={p.payments.map((payment) => payment.month)}
+                    initialOpen={props.openPaymentId === x.id}
+                    payment={x}
+                    triggerLabel="Editar"
+                    triggerSize="sm"
+                    triggerVariant="ghost"
+                  />
                 </div>
               </div>
             );
@@ -192,13 +224,24 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card className="p-5 md:col-span-2">
             <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
-              Resumen del contrato
+              Mini balance de la propiedad
             </div>
-            <div className="mt-1.5 num serif text-[40px] text-ink-900">
-              {fmtCLP(totalCollected)}
+            <div className="mt-1.5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-cream-200 bg-cream-50 p-4">
+                <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">Cobrado</div>
+                <div className="mt-1 num text-[22px] text-mint-700">{fmtCLP(totalCollected)}</div>
+              </div>
+              <div className="rounded-2xl border border-cream-200 bg-cream-50 p-4">
+                <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">Pendiente</div>
+                <div className="mt-1 num text-[22px] text-peach-700">{fmtCLP(totalPending)}</div>
+              </div>
+              <div className="rounded-2xl border border-cream-200 bg-cream-50 p-4">
+                <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">Esperado</div>
+                <div className="mt-1 num text-[22px] text-ink-900">{fmtCLP(totalExpected)}</div>
+              </div>
             </div>
             <div className="text-[13px] text-ink-500">
-              cobrados desde {fmtDate(p.startDate)} ({p.payments.length} meses)
+              Valores calculados con el historial guardado desde {fmtDate(p.startDate)}.
             </div>
             <div className="mt-6 space-y-3">
               {Object.entries(yearGroups).map(([year, items]) => {
@@ -206,6 +249,7 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
                   .filter((i) => i.status !== 'pending')
                   .reduce((s, x) => s + x.amountClp, 0);
                 const total = items.reduce((s, x) => s + x.amountClp, 0);
+                const progress = total > 0 ? (cobrado / total) * 100 : 0;
                 return (
                   <div key={year}>
                     <div className="mb-1.5 flex items-baseline justify-between">
@@ -217,7 +261,7 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
                     <div className="h-2 overflow-hidden rounded-full bg-cream-100">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${(cobrado / total) * 100}%`, background: accent[500] }}
+                        style={{ width: `${progress}%`, background: accent[500] }}
                       />
                     </div>
                   </div>
@@ -226,9 +270,7 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
             </div>
           </Card>
           <Card className="p-5">
-            <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
-              Próximos cobros
-            </div>
+            <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">Pendientes</div>
             <div className="mt-3 space-y-3">
               {pending.length === 0 && (
                 <div className="text-[13.5px] text-ink-500">Todo al día.</div>
@@ -240,19 +282,12 @@ export const PropertyDetail = (props: { property: PropertyWithPayments; tab: Tab
                 >
                   <div>
                     <div className="text-[14px] text-ink-900">{fmtMonthLong(x.month)}</div>
-                    <div className="text-[11.5px] text-ink-500">
-                      vence el día {p.startDate.split('-')[2]}
-                    </div>
+                    <div className="text-[11.5px] text-ink-500">vence el día {p.paymentDay}</div>
                   </div>
                   <div className="num text-[15px] text-ink-900">{fmtCLP(x.amountClp)}</div>
                 </div>
               ))}
             </div>
-            {pending[0] && (
-              <div className="mt-4">
-                <MarkPaidForm propertyId={p.id} payment={pending[0]} />
-              </div>
-            )}
           </Card>
         </div>
       )}

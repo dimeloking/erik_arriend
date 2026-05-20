@@ -120,6 +120,7 @@ export const CustomSignInForm = (props: CustomSignInFormProps) => {
             autoComplete="email"
             placeholder="correo@ejemplo.com"
             className={`${inputClassName} ${identifierError ? invalidInputClassName : ''}`}
+            aria-label="Correo electrónico"
             aria-invalid={identifierError ? 'true' : undefined}
             aria-describedby={identifierError ? 'identifier-error' : undefined}
           />
@@ -144,6 +145,7 @@ export const CustomSignInForm = (props: CustomSignInFormProps) => {
             autoComplete="current-password"
             placeholder="Tu contraseña"
             className={`${inputClassName} ${passwordError ? invalidInputClassName : ''}`}
+            aria-label="Contraseña"
             aria-invalid={passwordError ? 'true' : undefined}
             aria-describedby={passwordError ? 'password-error' : undefined}
           />

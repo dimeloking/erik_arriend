@@ -14,7 +14,3 @@ coverage/
 storybook-static/
 playwright-report/
 test-results/
-
-# Removed boilerplate showcase
-src/components/Hello.tsx
-src/components/Sponsors.tsx

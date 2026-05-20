@@ -1,0 +1,1 @@
+ALTER TABLE "property" ADD COLUMN "payment_day" integer DEFAULT 5 NOT NULL;

@@ -8,9 +8,14 @@ import { PropertyCard } from './PropertyCard';
 export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
   const { properties } = props;
   const ym = todayYM();
-  const monthEntries = properties.flatMap((p) =>
-    p.payments.filter((x) => x.month === ym).map((x) => ({ ...x, propId: p.id })),
-  );
+  const monthEntries = properties.map((p) => {
+    const payment = p.payments.find((x) => x.month === ym);
+    return {
+      amountClp: payment?.amountClp ?? p.rentClp,
+      propId: p.id,
+      status: payment?.status ?? 'pending',
+    };
+  });
   const expected = monthEntries.reduce((s, x) => s + x.amountClp, 0);
   const collected = monthEntries
     .filter((x) => x.status === 'paid')
@@ -26,7 +31,6 @@ export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
         .reduce((a, b) => a + b.amountClp, 0),
     0,
   );
-
   const months = (() => {
     const set = new Set<string>();
     for (const p of properties) {
@@ -118,6 +122,49 @@ export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
             ))}
           </div>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Link
+          href="/dashboard/balance"
+          className="group rounded-2xl border border-cream-200 bg-white p-5 ring-soft transition hover:border-ink-300"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[12px] tracking-[0.1em] text-ink-500 uppercase">
+                Balance general
+              </div>
+              <h2 className="mt-1 serif text-[26px] text-ink-900">Ingresos, gastos y saldos</h2>
+              <p className="mt-1 max-w-xl text-[13.5px] text-ink-500">
+                Revisa el historial completo, agrega gastos y controla el saldo que viene del Excel
+                más los movimientos nuevos.
+              </p>
+            </div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-mint-100 text-mint-700 transition group-hover:translate-x-0.5">
+              <Icon name="chart" size={20} />
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href="/dashboard/properties/new"
+          className="group rounded-2xl border border-cream-200 bg-white p-5 ring-soft transition hover:border-ink-300"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[12px] tracking-[0.1em] text-ink-500 uppercase">
+                Nueva propiedad
+              </div>
+              <h2 className="mt-1 serif text-[26px] text-ink-900">Agregar inmueble</h2>
+              <p className="mt-1 max-w-xl text-[13.5px] text-ink-500">
+                Crea una propiedad, asigna arriendo y empieza a registrar cobros mensuales.
+              </p>
+            </div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cream-100 text-ink-700 transition group-hover:translate-x-0.5">
+              <Icon name="plus" size={20} />
+            </div>
+          </div>
+        </Link>
       </div>
 
       <div className="flex items-center justify-between pt-2">

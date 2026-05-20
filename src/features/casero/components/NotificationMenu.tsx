@@ -2,16 +2,18 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { fmtCLP, fmtMonthLong } from '../lib';
+import { fmtCLP, fmtDate, fmtMonthLong } from '../lib';
 import { Icon } from '../ui/Icon';
 
 type Notification = {
+  paymentId: string;
   propertyId: string;
   propertyNickname: string;
   tenantName: string;
   month: string;
   amountClp: number;
   status: string;
+  dueDate: string;
 };
 
 type NotificationMenuProps = {
@@ -36,7 +38,7 @@ export const NotificationMenu = ({ notifications }: NotificationMenuProps) => {
       >
         <Icon name="bell" size={16} />
         {count > 0 ? (
-          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-peach-500 px-1 text-[11px] font-semibold text-white">
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-semibold text-white">
             {count}
           </span>
         ) : null}
@@ -50,20 +52,20 @@ export const NotificationMenu = ({ notifications }: NotificationMenuProps) => {
           <div className="border-b border-cream-100 px-4 py-3">
             <div className="text-[13px] font-semibold text-ink-900">Notificaciones</div>
             <div className="text-[12px] text-ink-500">
-              {count > 0 ? 'Arriendos pendientes del mes actual' : 'No hay pagos pendientes'}
+              {count > 0 ? 'Arriendos pendientes o en mora' : 'No hay pagos pendientes'}
             </div>
           </div>
 
           {count === 0 ? (
             <div className="px-4 py-5 text-[13px] text-ink-500">
-              Desde el día 2 aparecerán aquí los arriendos del mes que sigan sin pago.
+              Aquí aparecerán las casas pendientes cuando llegue o pase su día de pago.
             </div>
           ) : (
             <div className="max-h-80 overflow-y-auto py-1">
               {notifications.map((notification) => (
                 <Link
                   key={`${notification.propertyId}-${notification.month}`}
-                  href={`/dashboard/properties/${notification.propertyId}`}
+                  href={`/dashboard/properties/${notification.propertyId}?tab=historial&paymentId=${notification.paymentId}`}
                   role="menuitem"
                   tabIndex={0}
                   className="block px-4 py-3 hover:bg-cream-50"
@@ -78,6 +80,9 @@ export const NotificationMenu = ({ notifications }: NotificationMenuProps) => {
                       </div>
                       <div className="truncate text-[12px] text-ink-500">
                         {notification.tenantName} · {fmtMonthLong(notification.month)}
+                      </div>
+                      <div className="text-[11px] text-ink-400">
+                        Vence {fmtDate(notification.dueDate)}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">

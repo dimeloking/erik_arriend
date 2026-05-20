@@ -18,8 +18,8 @@ type Initial = Pick<
   | 'tenantName'
   | 'tenantPhone'
   | 'rentClp'
-  | 'depositClp'
   | 'startDate'
+  | 'paymentDay'
   | 'contractMonths'
   | 'increasePct'
   | 'increaseAnchor'
@@ -36,12 +36,12 @@ export const PropertyForm = (props: Props) => {
   const { initial } = props;
   const [color, setColor] = useState<AccentKey>(getAccentKey(initial?.color));
   const [pending, setPending] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
 
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = async (event) => {
     event.preventDefault();
     setPending(true);
-    setErrorMsg(null);
+    setErrorMessages([]);
     const fd = new FormData(event.currentTarget);
     fd.set('color', color);
     try {
@@ -50,19 +50,19 @@ export const PropertyForm = (props: Props) => {
         if (result.ok) {
           router.push(`/dashboard/properties/${initial.id}`);
         } else {
-          setErrorMsg('Revisa los campos del formulario.');
+          setErrorMessages(result.errors);
         }
       } else {
-        // createProperty redirects on success
-        await createProperty(fd);
+        const result = await createProperty(fd);
+        if (result.ok) {
+          router.push(`/dashboard/properties/${result.id}`);
+        } else {
+          setErrorMessages(result.errors);
+        }
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error inesperado';
-      // next.js redirect throws a special error — let it propagate
-      if (msg === 'NEXT_REDIRECT') {
-        return;
-      }
-      setErrorMsg(msg);
+      setErrorMessages([msg]);
     } finally {
       setPending(false);
     }
@@ -101,30 +101,29 @@ export const PropertyForm = (props: Props) => {
           defaultValue={initial?.tenantPhone ?? ''}
         />
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Field
           label="Arriendo mensual"
           name="rentClp"
+          type="number"
           prefix="$"
           placeholder="500000"
           inputMode="numeric"
+          min={1}
+          step={1}
           defaultValue={initial ? String(initial.rentClp) : ''}
           required
         />
         <Field
-          label="Garantía"
-          name="depositClp"
-          prefix="$"
-          placeholder="500000"
-          inputMode="numeric"
-          defaultValue={initial ? String(initial.depositClp) : '0'}
-        />
-        <Field
           label="Reajuste"
           name="increasePct"
+          type="number"
           suffix="%"
           placeholder="8"
           inputMode="numeric"
+          min={0}
+          max={100}
+          step={1}
           defaultValue={initial ? String(initial.increasePct) : '8'}
         />
       </div>
@@ -137,12 +136,13 @@ export const PropertyForm = (props: Props) => {
           required
         />
         <Field
-          label="Duración (meses)"
-          name="contractMonths"
+          label="Día de pago"
+          name="paymentDay"
           type="number"
           min={1}
-          max={120}
-          defaultValue={initial ? String(initial.contractMonths) : '12'}
+          max={31}
+          placeholder="5"
+          defaultValue={initial ? String(initial.paymentDay) : '5'}
         />
         <Field
           label="Mes de reajuste (01-12)"
@@ -152,6 +152,14 @@ export const PropertyForm = (props: Props) => {
           defaultValue={initial?.increaseAnchor ?? '01'}
         />
       </div>
+      <Field
+        label="Duración (meses)"
+        name="contractMonths"
+        type="number"
+        min={1}
+        max={120}
+        defaultValue={initial ? String(initial.contractMonths) : '12'}
+      />
       <div>
         <div className="mb-2 text-[12px] tracking-[0.08em] text-ink-500 uppercase">
           Color de etiqueta
@@ -181,8 +189,14 @@ export const PropertyForm = (props: Props) => {
         defaultValue={initial?.notes ?? ''}
       />
 
-      {errorMsg && (
-        <Card className="border-rose-100 bg-rose-50 p-3 text-[13px] text-rose-500">{errorMsg}</Card>
+      {errorMessages.length > 0 && (
+        <Card className="border-rose-100 bg-rose-50 p-3 text-[13px] text-rose-500">
+          <ul className="list-disc space-y-1 pl-4">
+            {errorMessages.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </Card>
       )}
 
       <div className="flex justify-end gap-2 pt-2">

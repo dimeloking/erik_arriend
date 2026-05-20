@@ -35,7 +35,7 @@ export default async function EditPropertyPage(props: EditPropertyPageProps) {
       <div>
         <h1 className="serif text-[34px] leading-tight text-ink-900">Editar propiedad</h1>
         <p className="mt-1 text-[14px] text-ink-500">
-          Actualiza los datos del inmueble. Los pagos existentes no se modifican.
+          Actualiza los datos del inmueble. Los cobros pendientes toman el nuevo arriendo.
         </p>
       </div>
       <Card className="p-6">
