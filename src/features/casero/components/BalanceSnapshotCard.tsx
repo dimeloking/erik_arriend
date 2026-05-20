@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { createExpense, deleteExpense, updateBalanceSnapshot } from '../actions';
-import { fmtCLP, fmtDate, todayISO } from '../lib';
+import { fmtCLP, fmtDate, fmtMonthLong, getPaymentStatus, todayISO } from '../lib';
 import type { BalanceSnapshotRow, ExpenseRow } from '../queries';
 import { Icon } from '../ui/Icon';
-import { Button, Card, Field } from '../ui/primitives';
+import { Button, Card, Field, StatusPill } from '../ui/primitives';
 
 export type BalanceMovement = {
   id: string;
@@ -15,6 +15,16 @@ export type BalanceMovement = {
   description: string;
   amountClp: number;
   type: 'income' | 'expense';
+};
+
+export type BalancePaymentDetail = {
+  id: string;
+  propertyName: string;
+  tenantName: string;
+  month: string;
+  paidOn: string | null;
+  amountClp: number;
+  status: string;
 };
 
 const BalanceHeader = (props: { action: React.ReactNode }) => (
@@ -111,13 +121,14 @@ export const BalanceSnapshotCard = (props: {
   appIncomeClp: number;
   expenses: ExpenseRow[];
   movements: BalanceMovement[];
+  payments: BalancePaymentDetail[];
 }) => {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [expenseErrors, setExpenseErrors] = useState<string[]>([]);
-  const { appIncomeClp, expenses, movements, snapshot } = props;
+  const { appIncomeClp, expenses, movements, payments, snapshot } = props;
   const appExpensesClp = expenses.reduce((sum, expense) => sum + expense.amountClp, 0);
   const totalIncomeClp = snapshot.incomeClp + appIncomeClp;
   const totalExpensesClp = snapshot.expensesClp + appExpensesClp;
@@ -378,6 +389,54 @@ export const BalanceSnapshotCard = (props: {
                     runningBalance={entry.runningBalance}
                   />
                 ))
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="serif text-[20px] text-ink-900">Historial de pagos</h3>
+              <div className="text-[13px] text-ink-500">
+                Todos los pagos guardados por propiedad e inquilino.
+              </div>
+            </div>
+            <div className="text-[12.5px] text-ink-500">{payments.length} registros</div>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-cream-200">
+            <div className="grid grid-cols-12 gap-3 border-b border-cream-200 bg-cream-50 px-4 py-3 text-[11px] tracking-[0.1em] text-ink-500 uppercase">
+              <div className="col-span-2">Mes</div>
+              <div className="col-span-3">Propiedad</div>
+              <div className="col-span-3">Inquilino</div>
+              <div className="col-span-2">Estado</div>
+              <div className="col-span-2 text-right">Valor</div>
+            </div>
+            {payments.length === 0 ? (
+              <div className="px-4 py-5 text-[13px] text-ink-500">Sin pagos guardados.</div>
+            ) : (
+              payments.slice(0, 24).map((payment) => (
+                <div
+                  key={payment.id}
+                  className="grid grid-cols-12 items-center gap-3 border-b border-cream-100 px-4 py-3 last:border-0"
+                >
+                  <div className="col-span-2">
+                    <div className="text-[13.5px] text-ink-900">{fmtMonthLong(payment.month)}</div>
+                    <div className="text-[11px] text-ink-400">{fmtDate(payment.paidOn)}</div>
+                  </div>
+                  <div className="col-span-3 truncate text-[13.5px] text-ink-700">
+                    {payment.propertyName}
+                  </div>
+                  <div className="col-span-3 truncate text-[13.5px] text-ink-700">
+                    {payment.tenantName}
+                  </div>
+                  <div className="col-span-2">
+                    <StatusPill status={getPaymentStatus(payment.status)} />
+                  </div>
+                  <div className="col-span-2 text-right num text-[14px] text-ink-900">
+                    {fmtCLP(payment.amountClp)}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

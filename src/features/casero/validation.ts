@@ -1,6 +1,7 @@
 import * as z from 'zod';
 
 const colorEnum = z.enum(['mint', 'peach', 'lavender', 'sky']);
+const contractDurationUnitEnum = z.enum(['days', 'months', 'years']);
 const paymentStatusEnum = z.enum(['pending', 'paid']);
 const monthAnchor = z.string().regex(/^(0[1-9]|1[0-2])$/u, 'Mes inválido (01-12)');
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, 'Formato YYYY-MM-DD');
@@ -41,8 +42,9 @@ export const propertyInputSchema = z.object({
       .max(31, 'Día de pago inválido'),
   ).default(5),
   contractMonths: numberFromForm(
-    z.number({ error: 'Duración debe ser un número' }).int().min(1).max(120),
+    z.number({ error: 'Duración debe ser un número' }).int().min(1).max(3650),
   ).default(12),
+  contractDurationUnit: contractDurationUnitEnum.default('months'),
   increasePct: numberFromForm(
     z.number({ error: 'Reajuste debe ser un número' }).int().min(0).max(100),
   ).default(0),

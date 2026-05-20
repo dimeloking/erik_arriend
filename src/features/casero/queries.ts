@@ -52,6 +52,10 @@ export type PendingPaymentNotification = {
 };
 
 const buildDuePayments = (property: PropertyRow, existingMonths: Set<string>) => {
+  if (!property.isOccupied) {
+    return [];
+  }
+
   const [startYear, startMonth] = property.startDate.split('-').map(Number);
   const today = new Date();
   const ty = today.getFullYear();
@@ -81,6 +85,8 @@ const buildDuePayments = (property: PropertyRow, existingMonths: Set<string>) =>
         propertyId: property.id,
         month,
         amountClp: amount,
+        tenantName: property.tenantName,
+        tenantPhone: property.tenantPhone,
         status: 'pending',
       });
     }

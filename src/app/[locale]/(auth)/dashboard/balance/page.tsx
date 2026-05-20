@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { BalanceSnapshotCard } from '@/features/casero/components/BalanceSnapshotCard';
-import type { BalanceMovement } from '@/features/casero/components/BalanceSnapshotCard';
+import type {
+  BalanceMovement,
+  BalancePaymentDetail,
+} from '@/features/casero/components/BalanceSnapshotCard';
 import { fmtCLP, fmtMonthLong } from '@/features/casero/lib';
 import {
   getBalanceSnapshot,
@@ -47,11 +50,24 @@ export default async function BalancePage(props: BalancePageProps) {
       .map((payment) => ({
         id: `income-${payment.id}`,
         date: payment.paidOn ?? `${payment.month}-01`,
-        description: `${property.nickname} · ${fmtMonthLong(payment.month)}`,
+        description: `${property.nickname} · ${payment.tenantName ?? property.tenantName} · ${fmtMonthLong(payment.month)}`,
         amountClp: payment.amountClp,
         type: 'income' as const,
       })),
   );
+  const paymentHistory: BalancePaymentDetail[] = properties
+    .flatMap((property) =>
+      property.payments.map((payment) => ({
+        id: payment.id,
+        propertyName: property.nickname,
+        tenantName: payment.tenantName ?? property.tenantName,
+        month: payment.month,
+        paidOn: payment.paidOn,
+        amountClp: payment.amountClp,
+        status: payment.status,
+      })),
+    )
+    .toSorted((a, b) => b.month.localeCompare(a.month) || b.id.localeCompare(a.id));
   const expenseMovements: BalanceMovement[] = expenses.map((expense) => ({
     id: `expense-${expense.id}`,
     date: expense.date,
@@ -109,6 +125,7 @@ export default async function BalancePage(props: BalancePageProps) {
         appIncomeClp={appIncomeClp}
         expenses={expenses}
         movements={[...incomeMovements, ...expenseMovements]}
+        payments={paymentHistory}
       />
     </div>
   );

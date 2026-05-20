@@ -8,7 +8,7 @@ import { ACCENT_OPTIONS, getAccentKey } from '../lib';
 import type { AccentKey } from '../lib';
 import type { PropertyWithPayments } from '../queries';
 import { Icon } from '../ui/Icon';
-import { Button, Card, Field } from '../ui/primitives';
+import { Button, Card, Field, FieldSelect } from '../ui/primitives';
 
 type Initial = Pick<
   PropertyWithPayments,
@@ -21,11 +21,18 @@ type Initial = Pick<
   | 'startDate'
   | 'paymentDay'
   | 'contractMonths'
+  | 'contractDurationUnit'
   | 'increasePct'
   | 'increaseAnchor'
   | 'color'
   | 'notes'
 >;
+
+const DURATION_UNIT_OPTIONS = [
+  { value: 'months', label: 'Meses' },
+  { value: 'years', label: 'Años' },
+  { value: 'days', label: 'Días' },
+] as const;
 
 type Props = {
   initial?: Initial;
@@ -152,14 +159,22 @@ export const PropertyForm = (props: Props) => {
           defaultValue={initial?.increaseAnchor ?? '01'}
         />
       </div>
-      <Field
-        label="Duración (meses)"
-        name="contractMonths"
-        type="number"
-        min={1}
-        max={120}
-        defaultValue={initial ? String(initial.contractMonths) : '12'}
-      />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+        <Field
+          label="Duración estimada"
+          name="contractMonths"
+          type="number"
+          min={1}
+          max={3650}
+          defaultValue={initial ? String(initial.contractMonths) : '12'}
+        />
+        <FieldSelect
+          label="Unidad"
+          name="contractDurationUnit"
+          defaultValue={initial?.contractDurationUnit ?? 'months'}
+          options={DURATION_UNIT_OPTIONS}
+        />
+      </div>
       <div>
         <div className="mb-2 text-[12px] tracking-[0.08em] text-ink-500 uppercase">
           Color de etiqueta

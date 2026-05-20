@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   pgTable,
@@ -24,11 +25,16 @@ export const propertySchema = pgTable(
     address: varchar('address', { length: 240 }).notNull(),
     tenantName: varchar('tenant_name', { length: 120 }).notNull(),
     tenantPhone: varchar('tenant_phone', { length: 40 }),
+    isOccupied: boolean('is_occupied').notNull().default(true),
+    vacantSince: varchar('vacant_since', { length: 10 }),
     rentClp: integer('rent_clp').notNull(),
     depositClp: integer('deposit_clp').notNull().default(0),
     startDate: varchar('start_date', { length: 10 }).notNull(), // YYYY-MM-DD
     paymentDay: integer('payment_day').notNull().default(5),
     contractMonths: integer('contract_months').notNull().default(12),
+    contractDurationUnit: varchar('contract_duration_unit', { length: 12 })
+      .notNull()
+      .default('months'),
     increasePct: integer('increase_pct').notNull().default(0),
     increaseAnchor: varchar('increase_anchor', { length: 2 }).notNull().default('01'), // 01..12
     color: varchar('color', { length: 16 }).notNull().default('mint'),
@@ -51,6 +57,8 @@ export const paymentSchema = pgTable(
       .references(() => propertySchema.id, { onDelete: 'cascade' }),
     month: varchar('month', { length: 7 }).notNull(), // YYYY-MM
     amountClp: integer('amount_clp').notNull(),
+    tenantName: varchar('tenant_name', { length: 120 }),
+    tenantPhone: varchar('tenant_phone', { length: 40 }),
     paidOn: varchar('paid_on', { length: 10 }), // YYYY-MM-DD or null
     status: varchar('status', { length: 16 }).notNull().default('pending'), // paid|late|pending|overdue
     method: varchar('method', { length: 32 }),

@@ -5,13 +5,16 @@ import {
   fmtDate,
   fmtMonth,
   fmtMonthLong,
+  formatResidenceDuration,
   getAccentKey,
   getPaymentStatus,
+  durationUnitLabel,
   nextYM,
 } from '../lib';
 import type { PaymentRow, PropertyWithPayments } from '../queries';
 import { Icon } from '../ui/Icon';
 import { Avatar, Button, Card, StatusPill } from '../ui/primitives';
+import { CancelContractButton } from './CancelContractButton';
 import { DeletePropertyButton } from './DeletePropertyButton';
 import { PaymentRegistrationDialog } from './PaymentRegistrationDialog';
 
@@ -53,6 +56,12 @@ export const PropertyDetail = (props: {
   const pending = p.payments.filter((x) => x.status === 'pending');
   const yearGroups = groupByYear(p.payments);
   const last = p.payments.at(-1);
+  const residenceDuration = formatResidenceDuration(p.startDate, p.vacantSince);
+  const estimatedDuration = `${p.contractMonths} ${durationUnitLabel(
+    p.contractDurationUnit,
+    p.contractMonths,
+  )}`;
+  const tenantDisplay = p.isOccupied ? p.tenantName : 'Desocupada';
 
   return (
     <div className="animate-fade-up space-y-5">
@@ -86,20 +95,25 @@ export const PropertyDetail = (props: {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Link href={`/dashboard/properties/${p.id}/edit`}>
                 <Button variant="soft" size="sm">
                   <Icon name="edit" size={13} /> Editar
                 </Button>
               </Link>
-              <PaymentRegistrationDialog
-                propertyId={p.id}
-                defaultMonth={
-                  pending[0]?.month ?? (last ? nextYM(last.month) : p.startDate.slice(0, 7))
-                }
-                defaultAmountClp={p.rentClp}
-                existingMonths={p.payments.map((payment) => payment.month)}
-              />
+              {p.isOccupied && (
+                <>
+                  <PaymentRegistrationDialog
+                    propertyId={p.id}
+                    defaultMonth={
+                      pending[0]?.month ?? (last ? nextYM(last.month) : p.startDate.slice(0, 7))
+                    }
+                    defaultAmountClp={p.rentClp}
+                    existingMonths={p.payments.map((payment) => payment.month)}
+                  />
+                  <CancelContractButton propertyId={p.id} tenantName={p.tenantName} />
+                </>
+              )}
               <DeletePropertyButton propertyId={p.id} propertyName={p.nickname} />
             </div>
           </div>
@@ -112,34 +126,37 @@ export const PropertyDetail = (props: {
               <div className="mt-1 num text-[22px] text-ink-900">{fmtCLP(p.rentClp)}</div>
             </Card>
             <Card className="p-4">
-              <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
-                Inicio contrato
+              <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">Día de pago</div>
+              <div className="mt-1 num text-[32px] leading-none text-ink-900">{p.paymentDay}</div>
+              <div className="mt-1 text-[12px] text-ink-400">
+                cada mes · inició {fmtDate(p.startDate)}
               </div>
-              <div className="mt-1 text-[15px] text-ink-900">{fmtDate(p.startDate)}</div>
-              <div className="text-[12px] text-ink-400">paga el día {p.paymentDay}</div>
             </Card>
             <Card className="p-4">
               <div className="text-[11px] tracking-[0.1em] text-ink-500 uppercase">
-                Reajuste anual
+                Lleva viviendo
               </div>
-              <div className="mt-1 num text-[22px] text-ink-900">+{p.increasePct}%</div>
-              <div className="text-[12px] text-ink-400">
-                cada {fmtMonthLong(`2025-${p.increaseAnchor}`).split(' ')[0]}
+              <div className="mt-1 text-[20px] leading-tight text-ink-900">
+                {p.isOccupied ? residenceDuration : 'Contrato cancelado'}
               </div>
+              <div className="text-[12px] text-ink-400">estimado {estimatedDuration}</div>
             </Card>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 border-t border-cream-200 px-7 py-4 md:grid-cols-[1fr_auto]">
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar name={p.tenantName} color={colorKey} size={42} />
+            <Avatar name={tenantDisplay} color={colorKey} size={42} />
             <div className="min-w-0">
               <div className="text-[11px] tracking-[0.1em] text-ink-400 uppercase">
                 Arrendatario
               </div>
-              <div className="truncate text-[15px] text-ink-900">{p.tenantName}</div>
+              <div className="truncate text-[15px] text-ink-900">{tenantDisplay}</div>
               <div className="mt-0.5 flex flex-wrap items-center gap-3 text-[12.5px] text-ink-500">
-                {p.tenantPhone && (
+                {!p.isOccupied && p.vacantSince && (
+                  <span>Desocupada desde {fmtDate(p.vacantSince)}</span>
+                )}
+                {p.isOccupied && p.tenantPhone && (
                   <span className="flex items-center gap-1">
                     <Icon name="phone" size={12} /> Teléfono: {p.tenantPhone}
                   </span>
@@ -190,6 +207,9 @@ export const PropertyDetail = (props: {
               >
                 <div className="col-span-3">
                   <div className="text-[14.5px] text-ink-900">{fmtMonthLong(x.month)}</div>
+                  <div className="mt-0.5 truncate text-[11px] text-ink-400">
+                    {x.tenantName ?? p.tenantName}
+                  </div>
                   {isIncrease && (
                     <div className="mt-0.5 flex items-center gap-1 text-[11px] text-mint-700">
                       <Icon name="arrow_up" size={10} /> Reajuste anual

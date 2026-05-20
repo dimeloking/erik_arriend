@@ -84,11 +84,14 @@ export const createProperty = async (formData: FormData) => {
       address: data.address,
       tenantName: data.tenantName,
       tenantPhone: data.tenantPhone ?? null,
+      isOccupied: true,
+      vacantSince: null,
       rentClp: data.rentClp,
       depositClp: data.depositClp,
       startDate: data.startDate,
       paymentDay: data.paymentDay,
       contractMonths: data.contractMonths,
+      contractDurationUnit: data.contractDurationUnit,
       increasePct: data.increasePct,
       increaseAnchor: data.increaseAnchor,
       color: data.color,
@@ -107,6 +110,8 @@ export const createProperty = async (formData: FormData) => {
         propertyId: created.id,
         month: s.month,
         amountClp: s.amountClp,
+        tenantName: data.tenantName,
+        tenantPhone: data.tenantPhone ?? null,
         status: s.status,
       })),
     );
@@ -131,11 +136,14 @@ export const updateProperty = async (propertyId: string, formData: FormData) => 
       address: data.address,
       tenantName: data.tenantName,
       tenantPhone: data.tenantPhone ?? null,
+      isOccupied: true,
+      vacantSince: null,
       rentClp: data.rentClp,
       depositClp: data.depositClp,
       startDate: data.startDate,
       paymentDay: data.paymentDay,
       contractMonths: data.contractMonths,
+      contractDurationUnit: data.contractDurationUnit,
       increasePct: data.increasePct,
       increaseAnchor: data.increaseAnchor,
       color: data.color,
@@ -150,7 +158,11 @@ export const updateProperty = async (propertyId: string, formData: FormData) => 
 
   await db
     .update(paymentSchema)
-    .set({ amountClp: data.rentClp })
+    .set({
+      amountClp: data.rentClp,
+      tenantName: data.tenantName,
+      tenantPhone: data.tenantPhone ?? null,
+    })
     .where(and(eq(paymentSchema.propertyId, propertyId), eq(paymentSchema.status, 'pending')));
 
   revalidatePath('/dashboard');
@@ -174,6 +186,26 @@ export const deleteProperty = async (propertyId: string) => {
   return { ok: true as const };
 };
 
+export const cancelContract = async (propertyId: string) => {
+  const userId = await requireUserId();
+  const [updated] = await db
+    .update(propertySchema)
+    .set({
+      isOccupied: false,
+      vacantSince: new Date().toISOString().slice(0, 10),
+    })
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .returning({ id: propertySchema.id });
+
+  if (!updated) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { ok: true as const };
+};
+
 export const registerPayment = async (propertyId: string, formData: FormData) => {
   const userId = await requireUserId();
   const parsed = registerPaymentInputSchema.safeParse(Object.fromEntries(formData));
@@ -183,7 +215,11 @@ export const registerPayment = async (propertyId: string, formData: FormData) =>
   const { data } = parsed;
 
   const [property] = await db
-    .select({ id: propertySchema.id })
+    .select({
+      id: propertySchema.id,
+      tenantName: propertySchema.tenantName,
+      tenantPhone: propertySchema.tenantPhone,
+    })
     .from(propertySchema)
     .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
     .limit(1);
@@ -197,6 +233,8 @@ export const registerPayment = async (propertyId: string, formData: FormData) =>
       propertyId,
       month: data.month,
       amountClp: data.amountClp,
+      tenantName: property.tenantName,
+      tenantPhone: property.tenantPhone,
       paidOn: data.status === 'paid' ? data.paidOn : null,
       status: data.status,
       method: data.status === 'paid' ? data.method : null,

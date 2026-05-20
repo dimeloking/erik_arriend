@@ -9,6 +9,7 @@ export const PropertyCard = (props: { property: PropertyWithPayments }) => {
   const last12 = p.payments.slice(-12).map((x) => x.amountClp);
   const current = p.payments.at(-1);
   const accent = ACCENTS[getAccentKey(p.color)];
+  const tenantLabel = p.isOccupied ? p.tenantName : 'Desocupada';
 
   return (
     <Link
@@ -30,7 +31,13 @@ export const PropertyCard = (props: { property: PropertyWithPayments }) => {
             <div className="truncate text-[12.5px] text-ink-500">{p.address}</div>
           </div>
         </div>
-        {current && <StatusPill status={getPaymentStatus(current.status)} />}
+        {p.isOccupied && current ? (
+          <StatusPill status={getPaymentStatus(current.status)} />
+        ) : (
+          <span className="rounded-full bg-cream-100 px-2.5 py-1 text-[11px] font-medium text-ink-500">
+            Desocupada
+          </span>
+        )}
       </div>
       <div className="flex items-center justify-between px-5 pb-4">
         <div>
@@ -44,7 +51,7 @@ export const PropertyCard = (props: { property: PropertyWithPayments }) => {
       </div>
       <div className="flex items-center justify-between border-t border-cream-200 px-5 py-3 text-[12.5px] text-ink-500">
         <span className="flex items-center gap-1.5">
-          <Icon name="user" size={13} /> {p.tenantName}
+          <Icon name="user" size={13} /> {tenantLabel}
         </span>
         <span className="flex items-center gap-1 text-ink-700 transition group-hover:translate-x-0.5">
           ver detalle <Icon name="chev_r" size={13} />

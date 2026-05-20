@@ -102,6 +102,43 @@ export const nextYM = (ym: string) => {
 
 export const todayISO = () => new Date().toISOString().slice(0, 10);
 
+export const durationUnitLabel = (unit: string | null | undefined, value: number) => {
+  if (unit === 'days') {
+    return value === 1 ? 'día' : 'días';
+  }
+  if (unit === 'years') {
+    return value === 1 ? 'año' : 'años';
+  }
+  return value === 1 ? 'mes' : 'meses';
+};
+
+export const formatResidenceDuration = (startDate: string, endDate?: string | null) => {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = endDate ? new Date(`${endDate}T00:00:00`) : new Date();
+  if (Number.isNaN(start.getTime()) || end < start) {
+    return '—';
+  }
+
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
+  if (end.getDate() < start.getDate()) {
+    months -= 1;
+  }
+
+  const anchor = new Date(start);
+  anchor.setMonth(anchor.getMonth() + Math.max(months, 0));
+  const days = Math.max(0, Math.floor((end.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)));
+  const years = Math.floor(Math.max(months, 0) / 12);
+  const restMonths = Math.max(months, 0) % 12;
+
+  const parts = [
+    years > 0 ? `${years} ${years === 1 ? 'año' : 'años'}` : '',
+    restMonths > 0 ? `${restMonths} ${restMonths === 1 ? 'mes' : 'meses'}` : '',
+    days > 0 || (years === 0 && restMonths === 0) ? `${days} ${days === 1 ? 'día' : 'días'}` : '',
+  ].filter(Boolean);
+
+  return parts.join(', ');
+};
+
 export type PaymentStatus = 'paid' | 'late' | 'pending' | 'overdue';
 
 export const getPaymentStatus = (value: string | null | undefined): PaymentStatus => {
