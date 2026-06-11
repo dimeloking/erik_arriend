@@ -34,16 +34,27 @@ const BTN_VARIANTS: Record<ButtonVariant, string> = {
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  isLoading?: boolean;
 };
 
 export const Button = (props: ButtonProps) => {
-  const { variant = 'primary', size = 'md', className = '', children, ...rest } = props;
+  const {
+    variant = 'primary',
+    size = 'md',
+    className = '',
+    isLoading,
+    children,
+    disabled,
+    ...rest
+  } = props;
   return (
     <button
       type="button"
+      disabled={isLoading ?? disabled}
       {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded-full font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${BTN_SIZES[size]} ${BTN_VARIANTS[variant]} ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition disabled:cursor-not-allowed disabled:opacity-50 ${BTN_SIZES[size]} ${BTN_VARIANTS[variant]} ${className}`}
     >
+      {isLoading ? <Icon name="loader" size={16} className="animate-spin" /> : null}
       {children}
     </button>
   );

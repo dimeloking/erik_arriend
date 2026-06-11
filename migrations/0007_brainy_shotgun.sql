@@ -1,0 +1,1 @@
+ALTER TABLE "payment" ADD COLUMN "extra_amount_clp" integer DEFAULT 0 NOT NULL;

@@ -76,6 +76,28 @@ export const paymentSchema = pgTable(
   ],
 );
 
+export const extraPaymentSchema = pgTable(
+  'extra_payment',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    propertyId: uuid('property_id')
+      .notNull()
+      .references(() => propertySchema.id, { onDelete: 'cascade' }),
+    month: varchar('month', { length: 7 }).notNull(), // YYYY-MM
+    description: varchar('description', { length: 240 }).notNull(),
+    amountClp: integer('amount_clp').notNull(),
+    paidOn: varchar('paid_on', { length: 10 }).notNull(), // YYYY-MM-DD
+    method: varchar('method', { length: 32 }).notNull(),
+    notes: text('notes'),
+    updatedAt: timestamp('updated_at', { mode: 'date' })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (table) => [index('extra_payment_property_idx').on(table.propertyId)],
+);
+
 export const balanceSnapshotSchema = pgTable(
   'balance_snapshot',
   {

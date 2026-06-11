@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { MdOutlineAttachMoney } from 'react-icons/md';
 import { fmtCLP, PAYMENT_METHODS, todayISO } from '../lib';
 import type { PaymentRow } from '../queries';
 import { Icon } from '../ui/Icon';
@@ -79,7 +80,7 @@ export function PaymentDialogPanel(props: PaymentDialogPanelProps) {
           <button
             type="button"
             onClick={props.close}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-ink-500 hover:bg-cream-100"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-ink-500 hover:bg-cream-100"
             aria-label="Cerrar"
           >
             <Icon name="x" size={16} />
@@ -89,14 +90,14 @@ export function PaymentDialogPanel(props: PaymentDialogPanelProps) {
         <form onSubmit={props.handleSubmit}>
           <div className="space-y-3 px-6 pb-2">
             <Card className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-mint-100 text-mint-700">
-                <Icon name="money" size={17} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint-100 text-mint-700">
+                <MdOutlineAttachMoney size={24} />
               </div>
-              <div className="flex-1">
-                <div className="text-[15px] text-ink-900">Pago de arriendo</div>
-                <div className="text-[12.5px] text-ink-500">{description}</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] text-ink-900">Pago de arriendo</div>
+                <div className="truncate text-[12.5px] text-ink-500">{description}</div>
               </div>
-              <div className="num text-[18px] text-ink-900">{fmtCLP(props.amount)}</div>
+              <div className="shrink-0 num text-[18px] text-ink-900">{fmtCLP(props.amount)}</div>
             </Card>
             {props.isEditing ? (
               <FieldSelect
@@ -182,8 +183,8 @@ export function PaymentDialogPanel(props: PaymentDialogPanelProps) {
             <Button type="button" variant="ghost" onClick={props.close} disabled={props.pending}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={props.pending}>
-              <Icon name="check" size={14} />{' '}
+            <Button type="submit" isLoading={props.pending}>
+              {!props.pending && <Icon name="check" size={14} />}{' '}
               {props.isEditing ? 'Guardar cambios' : 'Confirmar pago'}
             </Button>
           </div>

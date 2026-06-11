@@ -50,6 +50,20 @@
       "when": 1779289544077,
       "tag": "0006_tan_dracula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781113559371,
+      "tag": "0007_brainy_shotgun",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781116021519,
+      "tag": "0008_far_tusk",
+      "breakpoints": true
     }
   ]
 }

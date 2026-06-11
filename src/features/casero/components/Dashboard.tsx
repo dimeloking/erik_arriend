@@ -1,22 +1,29 @@
 import Link from 'next/link';
 import { ACCENTS, fmtCLP, fmtMonth, fmtMonthLong, getAccentKey, todayYM } from '../lib';
-import type { PropertyWithPayments } from '../queries';
+import type { ExpenseRow, PropertyWithPayments } from '../queries';
 import { Icon } from '../ui/Icon';
 import { Avatar, Button, Card } from '../ui/primitives';
 import { PropertyCard } from './PropertyCard';
 
-export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
-  const { properties } = props;
+export const Dashboard = (props: {
+  properties: PropertyWithPayments[];
+  expenses: ExpenseRow[];
+}) => {
+  const { properties, expenses } = props;
   const ym = todayYM();
   const occupiedProperties = properties.filter((p) => p.isOccupied);
+
   const monthEntries = occupiedProperties.map((p) => {
     const payment = p.payments.find((x) => x.month === ym);
+    const extras = p.extraPayments.filter((x) => x.month === ym);
+    const extrasTotal = extras.reduce((s, x) => s + x.amountClp, 0);
     return {
-      amountClp: payment?.amountClp ?? p.rentClp,
+      amountClp: (payment?.amountClp ?? p.rentClp) + extrasTotal,
       propId: p.id,
       status: payment?.status ?? 'pending',
     };
   });
+
   const expected = monthEntries.reduce((s, x) => s + x.amountClp, 0);
   const collected = monthEntries
     .filter((x) => x.status === 'paid')
@@ -24,7 +31,7 @@ export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
   const pending = expected - collected;
 
   const currentYear = String(new Date().getFullYear());
-  const ytd = properties.reduce(
+  const ytdRent = properties.reduce(
     (s, p) =>
       s +
       p.payments
@@ -32,29 +39,88 @@ export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
         .reduce((a, b) => a + b.amountClp, 0),
     0,
   );
+  const ytdExtras = properties.reduce(
+    (s, p) =>
+      s +
+      p.extraPayments
+        .filter((x) => x.month.startsWith(currentYear))
+        .reduce((a, b) => a + b.amountClp, 0),
+    0,
+  );
+  const ytd = ytdRent + ytdExtras;
+
   const months = (() => {
     const set = new Set<string>();
     for (const p of properties) {
       for (const x of p.payments) {
         set.add(x.month);
       }
+      for (const x of p.extraPayments) {
+        set.add(x.month);
+      }
     }
     return [...set].toSorted().slice(-6);
   })();
 
-  const monthlyTotals = months.map((m) => ({
-    m,
-    total: properties.reduce(
-      (s, p) => s + (p.payments.find((x) => x.month === m)?.amountClp ?? 0),
-      0,
-    ),
-  }));
+  const monthlyTotals = months.map((m) => {
+    let total = 0;
+    for (const p of properties) {
+      const payment = p.payments.find((x) => x.month === m);
+      if (payment?.status === 'paid') {
+        total += payment.amountClp;
+      }
+      for (const x of p.extraPayments) {
+        if (x.month === m) {
+          total += x.amountClp;
+        }
+      }
+    }
+    return { m, total };
+  });
   const maxTotal = Math.max(...monthlyTotals.map((x) => x.total), 1);
 
-  const upcoming = properties.flatMap((p) => {
-    const next = p.isOccupied ? p.payments.find((x) => x.status === 'pending') : undefined;
-    return next ? [{ p, next }] : [];
+  const thisMonthPayments = properties.flatMap((p) => {
+    if (!p.isOccupied) {
+      return [];
+    }
+    const currentPayment = p.payments.find((x) => x.month === ym);
+    const extras = p.extraPayments.filter((x) => x.month === ym);
+    return currentPayment ? [{ p, payment: currentPayment, extras }] : [];
   });
+
+  const pendingCount = thisMonthPayments.filter((x) => x.payment.status === 'pending').length;
+
+  const recentMovements = [
+    ...properties.flatMap((p) =>
+      p.payments
+        .filter((payment) => payment.status === 'paid')
+        .map((payment) => ({
+          id: `income-${payment.id}`,
+          date: payment.paidOn ?? `${payment.month}-01`,
+          description: `Ingreso de arriendo: ${p.nickname} (${payment.month})`,
+          amountClp: payment.amountClp,
+          type: 'income' as const,
+        })),
+    ),
+    ...properties.flatMap((p) =>
+      p.extraPayments.map((extra) => ({
+        id: `extra-${extra.id}`,
+        date: extra.paidOn,
+        description: `${extra.description} (${p.nickname})`,
+        amountClp: extra.amountClp,
+        type: 'income' as const,
+      })),
+    ),
+    ...expenses.map((expense) => ({
+      id: `expense-${expense.id}`,
+      date: expense.date,
+      description: expense.description,
+      amountClp: expense.amountClp,
+      type: 'expense' as const,
+    })),
+  ]
+    .toSorted((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    .slice(0, 5);
 
   const accent = ACCENTS.mint;
 
@@ -150,32 +216,84 @@ export const Dashboard = (props: { properties: PropertyWithPayments[] }) => {
         </Link>
       </div>
 
-      {upcoming.length > 0 && (
+      {thisMonthPayments.length > 0 && (
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="serif text-[20px] text-ink-900">Cobros del mes</h3>
-            <span className="text-[12.5px] text-ink-500">{upcoming.length} pendientes</span>
+            <span className="text-[12.5px] text-ink-500">{pendingCount} pendientes</span>
           </div>
           <div className="divide-y divide-cream-200">
-            {upcoming.map(({ p, next }) => (
-              <div key={p.id} className="flex items-center gap-4 py-3">
-                <Avatar name={p.tenantName} color={getAccentKey(p.color)} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[15px] text-ink-900">{p.tenantName}</div>
-                  <div className="truncate text-[12.5px] text-ink-500">
-                    {p.nickname} · {fmtMonthLong(next.month)}
+            {thisMonthPayments.map(({ p, payment, extras }) => {
+              const extrasTotal = extras.reduce((s, x) => s + x.amountClp, 0);
+              return (
+                <div key={p.id} className="flex items-center gap-4 py-3">
+                  <Avatar name={p.tenantName} color={getAccentKey(p.color)} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] text-ink-900">{p.tenantName}</div>
+                    <div className="truncate text-[12.5px] text-ink-500">
+                      {p.nickname} · {fmtMonthLong(payment.month)}
+                    </div>
                   </div>
+                  <div className="num text-[15px] text-ink-900">
+                    {fmtCLP(payment.amountClp + extrasTotal)}
+                  </div>
+                  <Link href={`/dashboard/properties/${p.id}`}>
+                    {payment.status === 'paid' ? (
+                      <Button size="sm" variant="soft" className="cursor-pointer">
+                        <Icon name="check" size={13} /> Registrado
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="mint">
+                        <Icon name="plus" size={13} /> Registrar pago
+                      </Button>
+                    )}
+                  </Link>
                 </div>
-                <div className="num text-[15px] text-ink-900">{fmtCLP(next.amountClp)}</div>
-                <Link href={`/dashboard/properties/${p.id}`}>
-                  <Button size="sm" variant="mint">
-                    <Icon name="check" size={13} /> Registrar
-                  </Button>
-                </Link>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
+      )}
+
+      {recentMovements.length > 0 && (
+        <div className="pt-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="serif text-[22px] text-ink-900">Últimos movimientos</h3>
+              <div className="text-[13px] text-ink-500">Ingresos y gastos recientes</div>
+            </div>
+            <Link href="/dashboard/balance">
+              <Button variant="soft" size="sm">
+                Ir al detallado <Icon name="chev_r" size={13} />
+              </Button>
+            </Link>
+          </div>
+          <Card className="p-5">
+            <div className="divide-y divide-cream-200">
+              {recentMovements.map((mov) => (
+                <div key={mov.id} className="flex items-center gap-4 py-3">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${mov.type === 'income' ? 'bg-mint-100 text-mint-700' : 'bg-rose-100 text-rose-700'}`}
+                  >
+                    <Icon name={mov.type === 'income' ? 'arrow_up' : 'arrow_dr'} size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="line-clamp-1 text-[14px] text-ink-900">{mov.description}</div>
+                    <div className="text-[12px] text-ink-500">
+                      {mov.date.split('-').toReversed().join('/')}
+                    </div>
+                  </div>
+                  <div
+                    className={`num text-[15px] font-medium ${mov.type === 'income' ? 'text-mint-700' : 'text-rose-700'}`}
+                  >
+                    {mov.type === 'income' ? '+' : '-'}
+                    {fmtCLP(mov.amountClp)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

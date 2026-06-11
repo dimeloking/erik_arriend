@@ -58,8 +58,9 @@ export const CancelContractButton = (props: CancelContractButtonProps) => {
           No
         </Button>
       )}
-      <Button type="button" size="sm" variant="danger" disabled={pending} onClick={handleCancel}>
-        <Icon name="x" size={13} /> {confirming ? 'Sí, cancelar' : 'Cancelar contrato'}
+      <Button type="button" size="sm" variant="danger" isLoading={pending} onClick={handleCancel}>
+        {!pending && <Icon name="x" size={13} />}{' '}
+        {confirming ? 'Sí, cancelar' : 'Cancelar contrato'}
       </Button>
     </div>
   );

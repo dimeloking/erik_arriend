@@ -7,6 +7,7 @@ import { db } from '@/libs/DB';
 import {
   balanceSnapshotSchema,
   expenseSchema,
+  extraPaymentSchema,
   paymentSchema,
   propertySchema,
 } from '@/models/Schema';
@@ -14,6 +15,7 @@ import { requireUserId } from './queries';
 import {
   balanceSnapshotInputSchema,
   expenseInputSchema,
+  extraPaymentInputSchema,
   propertyInputSchema,
   registerPaymentInputSchema,
 } from './validation';
@@ -301,6 +303,103 @@ export const updatePayment = async (propertyId: string, paymentId: string, formD
   return { ok: true as const };
 };
 
+export const createExtraPayment = async (propertyId: string, formData: FormData) => {
+  const userId = await requireUserId();
+  const parsed = extraPaymentInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false as const, errors: validationErrors(parsed.error) };
+  }
+  const { data } = parsed;
+
+  const [property] = await db
+    .select({ id: propertySchema.id })
+    .from(propertySchema)
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .limit(1);
+
+  if (!property) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  await db.insert(extraPaymentSchema).values({
+    propertyId,
+    month: data.month,
+    description: data.description,
+    amountClp: data.amountClp,
+    paidOn: data.paidOn,
+    method: data.method,
+    notes: data.notes ?? null,
+  });
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { ok: true as const };
+};
+
+export const updateExtraPayment = async (
+  propertyId: string,
+  extraPaymentId: string,
+  formData: FormData,
+) => {
+  const userId = await requireUserId();
+  const parsed = extraPaymentInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { ok: false as const, errors: validationErrors(parsed.error) };
+  }
+  const { data } = parsed;
+
+  const [property] = await db
+    .select({ id: propertySchema.id })
+    .from(propertySchema)
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .limit(1);
+
+  if (!property) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  await db
+    .update(extraPaymentSchema)
+    .set({
+      month: data.month,
+      description: data.description,
+      amountClp: data.amountClp,
+      paidOn: data.paidOn,
+      method: data.method,
+      notes: data.notes ?? null,
+    })
+    .where(
+      and(eq(extraPaymentSchema.id, extraPaymentId), eq(extraPaymentSchema.propertyId, propertyId)),
+    );
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { ok: true as const };
+};
+
+export const deleteExtraPayment = async (propertyId: string, extraPaymentId: string) => {
+  const userId = await requireUserId();
+  const [property] = await db
+    .select({ id: propertySchema.id })
+    .from(propertySchema)
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .limit(1);
+
+  if (!property) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  await db
+    .delete(extraPaymentSchema)
+    .where(
+      and(eq(extraPaymentSchema.id, extraPaymentId), eq(extraPaymentSchema.propertyId, propertyId)),
+    );
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { ok: true as const };
+};
+
 export const updateBalanceSnapshot = async (formData: FormData) => {
   const userId = await requireUserId();
   const parsed = balanceSnapshotInputSchema.safeParse(Object.fromEntries(formData));
@@ -357,5 +456,28 @@ export const deleteExpense = async (expenseId: string) => {
     .delete(expenseSchema)
     .where(and(eq(expenseSchema.id, expenseId), eq(expenseSchema.userId, userId)));
   revalidatePath('/dashboard');
+  return { ok: true as const };
+};
+
+export const deletePayment = async (propertyId: string, paymentId: string) => {
+  const userId = await requireUserId();
+
+  // Verify the property belongs to the user
+  const [property] = await db
+    .select({ id: propertySchema.id })
+    .from(propertySchema)
+    .where(and(eq(propertySchema.id, propertyId), eq(propertySchema.userId, userId)))
+    .limit(1);
+
+  if (!property) {
+    return { ok: false as const, errors: ['Propiedad no encontrada'] };
+  }
+
+  await db
+    .delete(paymentSchema)
+    .where(and(eq(paymentSchema.id, paymentId), eq(paymentSchema.propertyId, propertyId)));
+
+  revalidatePath('/dashboard');
+  revalidatePath(`/dashboard/properties/${propertyId}`);
   return { ok: true as const };
 };

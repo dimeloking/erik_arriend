@@ -90,6 +90,7 @@ export const PaymentRegistrationDialog = (props: Props) => {
         onClick={() => {
           setOpen(true);
         }}
+        className="cursor-pointer"
       >
         {isEditing ? <Icon name="edit" size={13} /> : <span className="num text-[13px]">$</span>}{' '}
         {props.triggerLabel ?? 'Registrar pago'}

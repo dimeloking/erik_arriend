@@ -24,7 +24,8 @@ type IconName =
   | 'sparkle'
   | 'logout'
   | 'shield'
-  | 'key';
+  | 'key'
+  | 'loader';
 
 const PATHS: Record<IconName, string> = {
   home: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-8.5Z',
@@ -56,6 +57,8 @@ const PATHS: Record<IconName, string> = {
   logout: 'M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l-5-5 5-5M5 12h12',
   shield: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z',
   key: 'M21 3l-7 7m0 0a4 4 0 1 1-5.7 5.7L3 21l3-3 3 3 3-3-2-2 4-4Z',
+  loader:
+    'M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83',
 };
 
 export type IconProps = {

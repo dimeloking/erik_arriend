@@ -42,6 +42,7 @@ export const CaseroLoadingScene = () => {
         }
 
         const scene = new BABYLON.Scene(engine);
+        // Hacemos el fondo totalmente transparente
         scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
         scene.ambientColor = new BABYLON.Color3(1, 0.98, 0.94);
 
@@ -50,7 +51,7 @@ export const CaseroLoadingScene = () => {
           Math.PI * 1.22,
           Math.PI / 2.55,
           5.7,
-          new BABYLON.Vector3(0, 0.92, 0),
+          new BABYLON.Vector3(0, 0.6, 0), // Centrar la casa
           scene,
         );
         camera.lowerRadiusLimit = 5.2;
@@ -81,6 +82,7 @@ export const CaseroLoadingScene = () => {
         const paperTone = new BABYLON.Color3(0.99, 0.97, 0.93);
         const roofTone = new BABYLON.Color3(0.97, 0.95, 0.9);
         const glassTone = new BABYLON.Color3(0.93, 0.94, 0.92);
+
         const paperMaterial = new BABYLON.StandardMaterial('paper-house', scene);
         paperMaterial.diffuseColor = paperTone;
         paperMaterial.ambientColor = paperTone;
@@ -274,10 +276,12 @@ export const CaseroLoadingScene = () => {
         let frame = 0;
         scene.onBeforeRenderObservable.add(() => {
           frame += engine.getDeltaTime() / 1000;
-          group.rotation.y = Math.sin(frame * 0.9) * 0.12;
-          group.position.y = Math.sin(frame * 2.2) * 0.08;
-          smokeLines.position.y = Math.sin(frame * 2.4) * 0.05;
-          smokeLines.position.x = Math.sin(frame * 1.3) * 0.012;
+          // Rotación continua y más rápida en el eje Y
+          group.rotation.y = frame * 1.5;
+          // Rebote ligeramente más rápido para acompañar
+          group.position.y = Math.sin(frame * 4) * 0.08;
+          smokeLines.position.y = Math.sin(frame * 3) * 0.05;
+          smokeLines.position.x = Math.sin(frame * 2) * 0.012;
           camera.alpha += 0.0008;
         });
 
@@ -304,7 +308,7 @@ export const CaseroLoadingScene = () => {
   }, []);
 
   return (
-    <div className="relative flex h-[270px] w-full max-w-[420px] items-center justify-center">
+    <div className="relative flex h-[220px] w-full max-w-[420px] items-center justify-center">
       <canvas
         ref={canvasRef}
         aria-label="Casa 3D cargando"

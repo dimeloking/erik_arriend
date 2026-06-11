@@ -61,7 +61,7 @@ export default async function proxy(request: NextRequest, event: NextFetchEvent)
   if (isAuthPage(request) || isProtectedRoute(request) || isHomePage(request)) {
     return await clerkMiddleware(async (auth, req) => {
       if (isProtectedRoute(req)) {
-        const locale = req.nextUrl.pathname.match(/(\/.*)\/dashboard/u)?.at(1) ?? '';
+        const locale = req.nextUrl.pathname.match(/(?<locale>\/.*)\/dashboard/u)?.at(1) ?? '';
 
         const signInUrl = new URL(`${locale}/sign-in`, req.url);
 

@@ -38,6 +38,21 @@ type Props = {
   initial?: Initial;
 };
 
+const FormErrors = (props: { messages: string[] }) => {
+  if (props.messages.length === 0) {
+    return null;
+  }
+  return (
+    <Card className="border-rose-100 bg-rose-50 p-3 text-[13px] text-rose-500">
+      <ul className="list-disc space-y-1 pl-4">
+        {props.messages.map((message) => (
+          <li key={message}>{message}</li>
+        ))}
+      </ul>
+    </Card>
+  );
+};
+
 export const PropertyForm = (props: Props) => {
   const router = useRouter();
   const { initial } = props;
@@ -204,15 +219,7 @@ export const PropertyForm = (props: Props) => {
         defaultValue={initial?.notes ?? ''}
       />
 
-      {errorMessages.length > 0 && (
-        <Card className="border-rose-100 bg-rose-50 p-3 text-[13px] text-rose-500">
-          <ul className="list-disc space-y-1 pl-4">
-            {errorMessages.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <FormErrors messages={errorMessages} />
 
       <div className="flex justify-end gap-2 pt-2">
         <Button
@@ -224,8 +231,8 @@ export const PropertyForm = (props: Props) => {
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={pending}>
-          <Icon name="check" size={14} /> {initial ? 'Guardar cambios' : 'Guardar'}
+        <Button type="submit" isLoading={pending}>
+          {!pending && <Icon name="check" size={14} />} {initial ? 'Guardar cambios' : 'Guardar'}
         </Button>
       </div>
     </form>

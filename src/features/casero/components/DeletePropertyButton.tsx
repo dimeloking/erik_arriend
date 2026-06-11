@@ -73,8 +73,8 @@ export const DeletePropertyButton = (props: { propertyId: string; propertyName: 
               >
                 Cancelar
               </Button>
-              <Button type="button" variant="danger" disabled={pending} onClick={handleDelete}>
-                <Icon name="trash" size={14} /> Eliminar
+              <Button type="button" variant="danger" isLoading={pending} onClick={handleDelete}>
+                {!pending && <Icon name="trash" size={14} />} Eliminar
               </Button>
             </div>
           </div>

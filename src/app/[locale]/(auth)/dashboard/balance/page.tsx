@@ -1,17 +1,10 @@
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
+import { getBalanceOverview } from '@/features/casero/balance-data';
 import { BalanceSnapshotCard } from '@/features/casero/components/BalanceSnapshotCard';
-import type {
-  BalanceMovement,
-  BalancePaymentDetail,
-} from '@/features/casero/components/BalanceSnapshotCard';
-import { fmtCLP, fmtMonthLong } from '@/features/casero/lib';
-import {
-  getBalanceSnapshot,
-  listExpenses,
-  listPropertiesWithPayments,
-} from '@/features/casero/queries';
+import { BalanceSnapshotEditDialog } from '@/features/casero/components/BalanceSnapshotEditDialog';
+import { fmtCLP } from '@/features/casero/lib';
 import { Icon } from '@/features/casero/ui/Icon';
 import { Button, Card } from '@/features/casero/ui/primitives';
 
@@ -27,54 +20,17 @@ export default async function BalancePage(props: BalancePageProps) {
   const { locale } = await props.params;
   setRequestLocale(locale);
 
-  const [properties, snapshot, expenses] = await Promise.all([
-    listPropertiesWithPayments(),
-    getBalanceSnapshot(),
-    listExpenses(),
-  ]);
-
-  const appIncomeClp = properties.reduce(
-    (sum, property) =>
-      sum +
-      property.payments
-        .filter((payment) => payment.status === 'paid')
-        .reduce((paymentSum, payment) => paymentSum + payment.amountClp, 0),
-    0,
-  );
-  const appExpensesClp = expenses.reduce((sum, expense) => sum + expense.amountClp, 0);
-  const currentBalanceClp = snapshot.balanceClp + appIncomeClp - appExpensesClp;
-
-  const incomeMovements: BalanceMovement[] = properties.flatMap((property) =>
-    property.payments
-      .filter((payment) => payment.status === 'paid')
-      .map((payment) => ({
-        id: `income-${payment.id}`,
-        date: payment.paidOn ?? `${payment.month}-01`,
-        description: `${property.nickname} · ${payment.tenantName ?? property.tenantName} · ${fmtMonthLong(payment.month)}`,
-        amountClp: payment.amountClp,
-        type: 'income' as const,
-      })),
-  );
-  const paymentHistory: BalancePaymentDetail[] = properties
-    .flatMap((property) =>
-      property.payments.map((payment) => ({
-        id: payment.id,
-        propertyName: property.nickname,
-        tenantName: payment.tenantName ?? property.tenantName,
-        month: payment.month,
-        paidOn: payment.paidOn,
-        amountClp: payment.amountClp,
-        status: payment.status,
-      })),
-    )
-    .toSorted((a, b) => b.month.localeCompare(a.month) || b.id.localeCompare(a.id));
-  const expenseMovements: BalanceMovement[] = expenses.map((expense) => ({
-    id: `expense-${expense.id}`,
-    date: expense.date,
-    description: expense.description,
-    amountClp: expense.amountClp,
-    type: 'expense',
-  }));
+  const {
+    snapshot,
+    expenses,
+    appIncomeClp,
+    appExpensesClp,
+    totalIncomeClp,
+    totalExpensesClp,
+    currentBalanceClp,
+    movements,
+    payments,
+  } = await getBalanceOverview();
 
   return (
     <div className="animate-fade-up space-y-6">
@@ -99,24 +55,41 @@ export default async function BalancePage(props: BalancePageProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="p-5">
-          <div className="text-[12px] tracking-[0.1em] text-ink-500 uppercase">Base Excel</div>
-          <div className="mt-1 num serif text-[30px] text-ink-900">
-            {fmtCLP(snapshot.balanceClp)}
+        <Card className="border-mint-100 bg-mint-50/30 p-5">
+          <div className="text-[12px] font-bold tracking-[0.1em] text-mint-700 uppercase">
+            Ingresos
           </div>
-          <div className="mt-1 text-[13px] text-ink-500">saldo inicial</div>
-        </Card>
-        <Card className="p-5">
-          <div className="text-[12px] tracking-[0.1em] text-ink-500 uppercase">Movimiento app</div>
-          <div className="mt-1 num serif text-[30px] text-ink-900">
-            {fmtCLP(appIncomeClp - appExpensesClp)}
+          <div className="mt-1 num serif text-[30px] text-ink-900">{fmtCLP(totalIncomeClp)}</div>
+          <div className="mt-1 text-[13px] text-ink-500">
+            {snapshot.incomeClp > 0
+              ? `Excel ${fmtCLP(snapshot.incomeClp)} + app ${fmtCLP(appIncomeClp)}`
+              : 'Solo movimientos de la app'}
           </div>
-          <div className="mt-1 text-[13px] text-ink-500">ingresos menos gastos nuevos</div>
         </Card>
-        <Card className="p-5">
-          <div className="text-[12px] tracking-[0.1em] text-ink-500 uppercase">Saldo actual</div>
+
+        <Card className="border-peach-100 bg-peach-50/30 p-5">
+          <div className="text-[12px] font-bold tracking-[0.1em] text-peach-700 uppercase">
+            Saldo actual
+          </div>
           <div className="mt-1 num serif text-[30px] text-ink-900">{fmtCLP(currentBalanceClp)}</div>
-          <div className="mt-1 text-[13px] text-mint-700">calculado automáticamente</div>
+          <div className="mt-1 text-[13px] text-ink-500">
+            {snapshot.balanceClp === 0
+              ? 'Basado en movimientos de la app'
+              : `Base ${fmtCLP(snapshot.balanceClp)} + movimiento app`}
+          </div>
+          <BalanceSnapshotEditDialog snapshot={snapshot} />
+        </Card>
+
+        <Card className="border-rose-100 bg-rose-50/30 p-5">
+          <div className="text-[12px] font-bold tracking-[0.1em] text-rose-700 uppercase">
+            Gastos
+          </div>
+          <div className="mt-1 num serif text-[30px] text-ink-900">{fmtCLP(totalExpensesClp)}</div>
+          <div className="mt-1 text-[13px] text-ink-500">
+            {snapshot.expensesClp > 0
+              ? `Excel ${fmtCLP(snapshot.expensesClp)} + app ${fmtCLP(appExpensesClp)}`
+              : 'Solo movimientos de la app'}
+          </div>
         </Card>
       </div>
 
@@ -124,8 +97,8 @@ export default async function BalancePage(props: BalancePageProps) {
         snapshot={snapshot}
         appIncomeClp={appIncomeClp}
         expenses={expenses}
-        movements={[...incomeMovements, ...expenseMovements]}
-        payments={paymentHistory}
+        movements={movements}
+        payments={payments}
       />
     </div>
   );

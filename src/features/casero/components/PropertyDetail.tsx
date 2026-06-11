@@ -1,4 +1,9 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { deleteExtraPayment, deletePayment } from '../actions';
 import {
   ACCENTS,
   fmtCLP,
@@ -11,11 +16,12 @@ import {
   durationUnitLabel,
   nextYM,
 } from '../lib';
-import type { PaymentRow, PropertyWithPayments } from '../queries';
+import type { ExtraPaymentRow, PaymentRow, PropertyWithPayments } from '../queries';
 import { Icon } from '../ui/Icon';
 import { Avatar, Button, Card, StatusPill } from '../ui/primitives';
 import { CancelContractButton } from './CancelContractButton';
 import { DeletePropertyButton } from './DeletePropertyButton';
+import { ExtraPaymentRegistrationDialog } from './ExtraPaymentRegistrationDialog';
 import { PaymentRegistrationDialog } from './PaymentRegistrationDialog';
 
 type Tab = 'historial' | 'balance' | 'reajustes';
@@ -28,12 +34,28 @@ const TABS: readonly { k: Tab; l: string }[] = [
 
 const tabHref = (id: string, tab: Tab) => `/dashboard/properties/${id}?tab=${tab}`;
 
-const groupByYear = (payments: PaymentRow[]) => {
-  const g: Record<string, PaymentRow[]> = {};
+type HistoryItem = { type: 'payment'; data: PaymentRow } | { type: 'extra'; data: ExtraPaymentRow };
+
+const groupByYear = (payments: PaymentRow[], extraPayments: ExtraPaymentRow[]) => {
+  const g: Record<string, HistoryItem[]> = {};
   for (const x of payments) {
     const y = x.month.slice(0, 4);
-    (g[y] ??= []).push(x);
+    (g[y] ??= []).push({ type: 'payment', data: x });
   }
+  for (const x of extraPayments) {
+    const y = x.month.slice(0, 4);
+    (g[y] ??= []).push({ type: 'extra', data: x });
+  }
+
+  // Sort items within each year by date descending
+  for (const items of Object.values(g)) {
+    items.sort((a, b) => {
+      const dateA = a.type === 'payment' ? (a.data.paidOn ?? `${a.data.month}-01`) : a.data.paidOn;
+      const dateB = b.type === 'payment' ? (b.data.paidOn ?? `${b.data.month}-01`) : b.data.paidOn;
+      return dateB.localeCompare(dateA);
+    });
+  }
+
   return g;
 };
 
@@ -42,19 +64,51 @@ export const PropertyDetail = (props: {
   tab: Tab;
   openPaymentId?: string;
 }) => {
+  const router = useRouter();
+  const [pendingOp, setPendingOp] = useState(false);
   const p = props.property;
   const { tab } = props;
+
+  const handleDeletePayment = async (paymentId: string) => {
+    // eslint-disable-next-line no-alert
+    if (window.confirm('¿Estás seguro de que quieres eliminar este registro de pago?')) {
+      setPendingOp(true);
+      await deletePayment(p.id, paymentId);
+      setPendingOp(false);
+      router.refresh();
+    }
+  };
+
+  const handleDeleteExtraPayment = async (extraId: string) => {
+    // eslint-disable-next-line no-alert
+    if (window.confirm('¿Estás seguro de que quieres eliminar este cobro extra?')) {
+      setPendingOp(true);
+      await deleteExtraPayment(p.id, extraId);
+      setPendingOp(false);
+      router.refresh();
+    }
+  };
+
   const colorKey = getAccentKey(p.color);
   const accent = ACCENTS[colorKey];
-  const totalCollected = p.payments
+
+  const totalRentCollected = p.payments
     .filter((x) => x.status !== 'pending')
     .reduce((s, x) => s + x.amountClp, 0);
-  const totalExpected = p.payments.reduce((s, x) => s + x.amountClp, 0);
+
+  const totalExtrasCollected = p.extraPayments.reduce((s, x) => s + x.amountClp, 0);
+
+  const totalCollected = totalRentCollected + totalExtrasCollected;
+
+  const totalRentExpected = p.payments.reduce((s, x) => s + x.amountClp, 0);
+  const totalExpected = totalRentExpected + totalExtrasCollected;
+
   const totalPending = p.payments
     .filter((x) => x.status === 'pending')
     .reduce((s, x) => s + x.amountClp, 0);
+
   const pending = p.payments.filter((x) => x.status === 'pending');
-  const yearGroups = groupByYear(p.payments);
+  const yearGroups = groupByYear(p.payments, p.extraPayments);
   const last = p.payments.at(-1);
   const residenceDuration = formatResidenceDuration(p.startDate, p.vacantSince);
   const estimatedDuration = `${p.contractMonths} ${durationUnitLabel(
@@ -111,10 +165,21 @@ export const PropertyDetail = (props: {
                     defaultAmountClp={p.rentClp}
                     existingMonths={p.payments.map((payment) => payment.month)}
                   />
-                  <CancelContractButton propertyId={p.id} tenantName={p.tenantName} />
+                  <ExtraPaymentRegistrationDialog
+                    propertyId={p.id}
+                    defaultMonth={
+                      pending[0]?.month ?? (last ? last.month : p.startDate.slice(0, 7))
+                    }
+                    triggerVariant="soft"
+                  />
+                  <div className="inline-block cursor-pointer">
+                    <CancelContractButton propertyId={p.id} tenantName={p.tenantName} />
+                  </div>
                 </>
               )}
-              <DeletePropertyButton propertyId={p.id} propertyName={p.nickname} />
+              <div className="inline-block cursor-pointer">
+                <DeletePropertyButton propertyId={p.id} propertyName={p.nickname} />
+              </div>
             </div>
           </div>
 
@@ -192,51 +257,126 @@ export const PropertyDetail = (props: {
       {tab === 'historial' && (
         <Card className="overflow-hidden">
           <div className="grid grid-cols-12 gap-3 border-b border-cream-200 bg-cream-50 px-5 py-3 text-[11px] tracking-[0.1em] text-ink-500 uppercase">
-            <div className="col-span-3">Mes</div>
-            <div className="col-span-3">Estado</div>
+            <div className="col-span-3">Mes / Descripción</div>
+            <div className="col-span-3">Estado / Tipo</div>
             <div className="col-span-3">Pagado el</div>
             <div className="col-span-3 text-right">Monto</div>
           </div>
-          {[...p.payments].toReversed().map((x, i) => {
-            const prev = p.payments[p.payments.length - 2 - i];
-            const isIncrease = prev && x.amountClp > prev.amountClp;
-            return (
-              <div
-                key={x.id}
-                className="grid grid-cols-12 items-center gap-3 border-b border-cream-100 px-5 py-3.5 last:border-0 hover:bg-cream-50/60"
-              >
-                <div className="col-span-3">
-                  <div className="text-[14.5px] text-ink-900">{fmtMonthLong(x.month)}</div>
-                  <div className="mt-0.5 truncate text-[11px] text-ink-400">
-                    {x.tenantName ?? p.tenantName}
-                  </div>
-                  {isIncrease && (
-                    <div className="mt-0.5 flex items-center gap-1 text-[11px] text-mint-700">
-                      <Icon name="arrow_up" size={10} /> Reajuste anual
+          {Object.entries(yearGroups)
+            .toReversed()
+            .map(([year, items]) => (
+              <div key={year}>
+                <div className="border-b border-cream-100 bg-cream-50/40 px-5 py-1.5 text-[11px] font-bold text-ink-400">
+                  {year}
+                </div>
+                {items.map((item) => {
+                  if (item.type === 'payment') {
+                    const x = item.data;
+                    return (
+                      <div
+                        key={x.id}
+                        className="grid grid-cols-12 items-center gap-3 border-b border-cream-100 px-5 py-3.5 last:border-0 hover:bg-cream-50/60"
+                      >
+                        <div className="col-span-3">
+                          <div className="text-[14.5px] text-ink-900">{fmtMonthLong(x.month)}</div>
+                          <div className="mt-0.5 truncate text-[11px] text-ink-400">
+                            {x.tenantName ?? p.tenantName}
+                          </div>
+                        </div>
+                        <div className="col-span-3">
+                          <StatusPill status={getPaymentStatus(x.status)} />
+                        </div>
+                        <div className="col-span-3 num text-[13px] text-ink-700">
+                          {fmtDate(x.paidOn)}
+                        </div>
+                        <div className="col-span-3 flex items-center justify-end gap-2 text-right">
+                          <span className="num text-[15px] text-ink-900">
+                            {fmtCLP(x.amountClp)}
+                          </span>
+                          <PaymentRegistrationDialog
+                            propertyId={p.id}
+                            defaultMonth={x.month}
+                            defaultAmountClp={x.amountClp}
+                            existingMonths={p.payments.map((payment) => payment.month)}
+                            initialOpen={props.openPaymentId === x.id}
+                            payment={x}
+                            triggerLabel={x.status === 'pending' ? 'Registrar pago' : 'Editar'}
+                            triggerSize="sm"
+                            triggerVariant={x.status === 'pending' ? 'mint' : 'soft'}
+                          />
+                          <button
+                            type="button"
+                            title="Eliminar registro"
+                            disabled={pendingOp}
+                            onClick={() => {
+                              void handleDeletePayment(x.id);
+                            }}
+                            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink-400 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
+                          >
+                            {pendingOp ? (
+                              <Icon name="loader" size={14} className="animate-spin" />
+                            ) : (
+                              <Icon name="trash" size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  const x = item.data;
+                  return (
+                    <div
+                      key={x.id}
+                      className="grid grid-cols-12 items-center gap-3 border-b border-cream-100 bg-peach-50/10 px-5 py-3.5 last:border-0 hover:bg-cream-50/60"
+                    >
+                      <div className="col-span-3">
+                        <div className="text-peach-800 text-[14.5px] font-medium">
+                          {x.description}
+                        </div>
+                        <div className="mt-0.5 truncate text-[11px] text-ink-400">
+                          {fmtMonthLong(x.month)}
+                        </div>
+                      </div>
+                      <div className="col-span-3">
+                        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-peach-100 px-2.5 text-[11px] font-medium text-peach-700">
+                          Cobro extra
+                        </span>
+                      </div>
+                      <div className="col-span-3 num text-[13px] text-ink-700">
+                        {fmtDate(x.paidOn)}
+                      </div>
+                      <div className="col-span-3 flex items-center justify-end gap-2 text-right">
+                        <span className="text-peach-900 num text-[15px] font-medium">
+                          {fmtCLP(x.amountClp)}
+                        </span>
+                        <ExtraPaymentRegistrationDialog
+                          propertyId={p.id}
+                          defaultMonth={x.month}
+                          extraPayment={x}
+                          triggerLabel="Editar"
+                          triggerVariant="soft"
+                        />
+                        <button
+                          type="button"
+                          title="Eliminar cobro extra"
+                          disabled={pendingOp}
+                          onClick={() => {
+                            void handleDeleteExtraPayment(x.id);
+                          }}
+                          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-ink-400 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
+                        >
+                          {pendingOp ? (
+                            <Icon name="loader" size={14} className="animate-spin" />
+                          ) : (
+                            <Icon name="trash" size={14} />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-                <div className="col-span-3">
-                  <StatusPill status={getPaymentStatus(x.status)} />
-                </div>
-                <div className="col-span-3 num text-[13px] text-ink-700">{fmtDate(x.paidOn)}</div>
-                <div className="col-span-3 flex items-center justify-end gap-2 text-right">
-                  <span className="num text-[15px] text-ink-900">{fmtCLP(x.amountClp)}</span>
-                  <PaymentRegistrationDialog
-                    propertyId={p.id}
-                    defaultMonth={x.month}
-                    defaultAmountClp={x.amountClp}
-                    existingMonths={p.payments.map((payment) => payment.month)}
-                    initialOpen={props.openPaymentId === x.id}
-                    payment={x}
-                    triggerLabel="Editar"
-                    triggerSize="sm"
-                    triggerVariant="ghost"
-                  />
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            ))}
         </Card>
       )}
 
@@ -260,15 +400,19 @@ export const PropertyDetail = (props: {
                 <div className="mt-1 num text-[22px] text-ink-900">{fmtCLP(totalExpected)}</div>
               </div>
             </div>
-            <div className="text-[13px] text-ink-500">
-              Valores calculados con el historial guardado desde {fmtDate(p.startDate)}.
+            <div className="mt-2 text-[13px] text-ink-500">
+              Valores calculados con el historial guardado desde {fmtDate(p.startDate)}. Incluye
+              arriendos y cobros extra.
             </div>
             <div className="mt-6 space-y-3">
               {Object.entries(yearGroups).map(([year, items]) => {
                 const cobrado = items
-                  .filter((i) => i.status !== 'pending')
-                  .reduce((s, x) => s + x.amountClp, 0);
-                const total = items.reduce((s, x) => s + x.amountClp, 0);
+                  .filter(
+                    (i) =>
+                      i.type === 'extra' || (i.type === 'payment' && i.data.status !== 'pending'),
+                  )
+                  .reduce((s, x) => s + x.data.amountClp, 0);
+                const total = items.reduce((s, x) => s + x.data.amountClp, 0);
                 const progress = total > 0 ? (cobrado / total) * 100 : 0;
                 return (
                   <div key={year}>
@@ -333,12 +477,18 @@ export const PropertyDetail = (props: {
           <div className="relative mt-6">
             <div className="absolute top-2 bottom-2 left-3 w-px bg-cream-200" />
             {Object.entries(yearGroups).map(([year, items]) => {
-              const [start] = items;
+              const rentPayments = items
+                .filter((i): i is { type: 'payment'; data: PaymentRow } => i.type === 'payment')
+                .map((i) => i.data);
+              const [start] = rentPayments;
               if (!start) {
                 return null;
               }
               const prevYear = String(Number(year) - 1);
-              const prev = yearGroups[prevYear]?.[0];
+              const prevPayments = yearGroups[prevYear]
+                ?.filter((i): i is { type: 'payment'; data: PaymentRow } => i.type === 'payment')
+                .map((i) => i.data);
+              const prev = prevPayments?.[0];
               const delta = prev
                 ? Math.round(((start.amountClp - prev.amountClp) / prev.amountClp) * 100)
                 : 0;

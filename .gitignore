@@ -64,3 +64,5 @@ build-archive.log
 /test-results/
 /playwright-report/
 /playwright/.cache/
+# Local AI runtime state
+.atl/

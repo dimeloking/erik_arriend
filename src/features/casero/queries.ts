@@ -5,14 +5,15 @@ import { db } from '@/libs/DB';
 import {
   balanceSnapshotSchema,
   expenseSchema,
+  extraPaymentSchema,
   paymentSchema,
   propertySchema,
 } from '@/models/Schema';
 
 export const DEFAULT_BALANCE_SNAPSHOT = {
-  incomeClp: 34_118_011,
-  expensesClp: 30_411_264,
-  balanceClp: 3_706_747,
+  incomeClp: 0,
+  expensesClp: 0,
+  balanceClp: -3_588_087,
 } as const;
 
 export const requireUserId = async () => {
@@ -34,12 +35,16 @@ export const listProperties = async () => {
 
 export type PropertyRow = Awaited<ReturnType<typeof listProperties>>[number];
 export type PaymentRow = typeof paymentSchema.$inferSelect;
+export type ExtraPaymentRow = typeof extraPaymentSchema.$inferSelect;
 export type ExpenseRow = typeof expenseSchema.$inferSelect;
 export type BalanceSnapshotRow = Pick<
   typeof balanceSnapshotSchema.$inferSelect,
   'incomeClp' | 'expensesClp' | 'balanceClp'
 >;
-export type PropertyWithPayments = PropertyRow & { payments: PaymentRow[] };
+export type PropertyWithPayments = PropertyRow & {
+  payments: PaymentRow[];
+  extraPayments: ExtraPaymentRow[];
+};
 export type PendingPaymentNotification = {
   paymentId: string;
   propertyId: string;
@@ -116,28 +121,46 @@ export const listPropertiesWithPayments = async (): Promise<PropertyWithPayments
   }
 
   const propertyIds = properties.map((p) => p.id);
-  const payments = await db
-    .select()
-    .from(paymentSchema)
-    .where(inArray(paymentSchema.propertyId, propertyIds))
-    .orderBy(asc(paymentSchema.month));
+  const [payments, extraPayments] = await Promise.all([
+    db
+      .select()
+      .from(paymentSchema)
+      .where(inArray(paymentSchema.propertyId, propertyIds))
+      .orderBy(asc(paymentSchema.month)),
+    db
+      .select()
+      .from(extraPaymentSchema)
+      .where(inArray(extraPaymentSchema.propertyId, propertyIds))
+      .orderBy(desc(extraPaymentSchema.paidOn)),
+  ]);
 
-  const byProp = new Map<string, PaymentRow[]>();
+  const paymentsByProp = new Map<string, PaymentRow[]>();
   for (const pay of payments) {
-    const arr = byProp.get(pay.propertyId) ?? [];
+    const arr = paymentsByProp.get(pay.propertyId) ?? [];
     arr.push(pay);
-    byProp.set(pay.propertyId, arr);
+    paymentsByProp.set(pay.propertyId, arr);
+  }
+
+  const extrasByProp = new Map<string, ExtraPaymentRow[]>();
+  for (const extra of extraPayments) {
+    const arr = extrasByProp.get(extra.propertyId) ?? [];
+    arr.push(extra);
+    extrasByProp.set(extra.propertyId, arr);
   }
 
   const missingPayments = properties.flatMap((p) =>
-    buildDuePayments(p, new Set((byProp.get(p.id) ?? []).map((payment) => payment.month))),
+    buildDuePayments(p, new Set((paymentsByProp.get(p.id) ?? []).map((payment) => payment.month))),
   );
   if (missingPayments.length > 0) {
     await db.insert(paymentSchema).values(missingPayments).onConflictDoNothing();
     return await listPropertiesWithPayments();
   }
 
-  return properties.map((p) => ({ ...p, payments: byProp.get(p.id) ?? [] }));
+  return properties.map((p) => ({
+    ...p,
+    payments: paymentsByProp.get(p.id) ?? [],
+    extraPayments: extrasByProp.get(p.id) ?? [],
+  }));
 };
 
 export const getPropertyWithPayments = async (
@@ -154,11 +177,18 @@ export const getPropertyWithPayments = async (
     return null;
   }
 
-  const payments = await db
-    .select()
-    .from(paymentSchema)
-    .where(eq(paymentSchema.propertyId, property.id))
-    .orderBy(asc(paymentSchema.month));
+  const [payments, extraPayments] = await Promise.all([
+    db
+      .select()
+      .from(paymentSchema)
+      .where(eq(paymentSchema.propertyId, property.id))
+      .orderBy(asc(paymentSchema.month)),
+    db
+      .select()
+      .from(extraPaymentSchema)
+      .where(eq(extraPaymentSchema.propertyId, property.id))
+      .orderBy(desc(extraPaymentSchema.paidOn)),
+  ]);
 
   const missingPayments = buildDuePayments(
     property,
@@ -169,7 +199,7 @@ export const getPropertyWithPayments = async (
     return await getPropertyWithPayments(propertyId);
   }
 
-  return { ...property, payments };
+  return { ...property, payments, extraPayments };
 };
 
 export const listPendingPaymentNotifications = async (): Promise<PendingPaymentNotification[]> => {
