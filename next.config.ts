@@ -13,6 +13,7 @@ const baseConfig: NextConfig = {
   reactStrictMode: true,
   // typedRoutes stays off: next-intl links omit the [locale] segment (as-needed prefix), so every href fails RouteImpl typing.
   cacheComponents: true,
+  partialPrefetching: true,
   reactCompiler: true,
   agentRules: false,
   experimental: {
