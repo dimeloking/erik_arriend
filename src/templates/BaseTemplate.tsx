@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import { AppConfig } from '@/utils/AppConfig';
 
 export const BaseTemplate = (props: {
+  year: number;
   leftNav: React.ReactNode;
   rightNav?: React.ReactNode;
   children: React.ReactNode;
@@ -32,7 +33,7 @@ export const BaseTemplate = (props: {
 
         <footer className="border-t border-gray-300 py-8 text-center text-sm">
           {t('footer_text', {
-            year: new Date().getFullYear(),
+            year: props.year,
             name: AppConfig.name,
           })}
         </footer>

@@ -11,6 +11,7 @@ describe('Base template', () => {
       await render(
         <NextIntlClientProvider locale="en" messages={messages}>
           <BaseTemplate
+            year={2026}
             leftNav={
               <>
                 <li>link 1</li>
@@ -32,7 +33,9 @@ describe('Base template', () => {
     it('should render the footer with the app name', async () => {
       await render(
         <NextIntlClientProvider locale="en" messages={messages}>
-          <BaseTemplate leftNav={<li>1</li>}>{null}</BaseTemplate>
+          <BaseTemplate year={2026} leftNav={<li>1</li>}>
+            {null}
+          </BaseTemplate>
         </NextIntlClientProvider>,
       );
 

@@ -1,7 +1,22 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { cacheLife } from 'next/cache';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { Link } from '@/libs/I18nNavigation';
 import { BaseTemplate } from '@/templates/BaseTemplate';
+
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
+// Remove this opt-out after verifying the segment passes validation without it.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
+async function getCurrentYear() {
+  'use cache';
+
+  cacheLife('days');
+  // 'use cache' functions must be async; keep an await to satisfy require-await.
+  await Promise.resolve();
+  return new Date().getFullYear();
+}
 
 export default async function Layout(props: {
   children: React.ReactNode;
@@ -17,6 +32,7 @@ export default async function Layout(props: {
   return (
     <>
       <BaseTemplate
+        year={await getCurrentYear()}
         leftNav={
           <>
             <li>

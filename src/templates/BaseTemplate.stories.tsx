@@ -23,6 +23,7 @@ type Story = StoryObj<typeof meta>;
 
 export const BaseWithReactComponent: Story = {
   args: {
+    year: 2026,
     children: <div>Children node</div>,
     leftNav: (
       <>
