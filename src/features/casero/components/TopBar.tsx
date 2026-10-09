@@ -5,6 +5,10 @@ import { listPendingPaymentNotifications } from '../queries';
 import { Icon } from '../ui/Icon';
 import { NotificationMenu } from './NotificationMenu';
 
+export const TopBarFallback = () => (
+  <header className="sticky top-0 z-30 h-16 border-b border-cream-200 bg-cream-50/85 backdrop-blur" />
+);
+
 export const TopBar = async () => {
   const user = await currentUser();
   const notifications = await listPendingPaymentNotifications();

@@ -8,11 +8,6 @@ import { fmtCLP } from '@/features/casero/lib';
 import { Icon } from '@/features/casero/ui/Icon';
 import { Button, Card } from '@/features/casero/ui/primitives';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 type BalancePageProps = {
   params: Promise<{ locale: string }>;
 };

@@ -3,9 +3,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { routing } from '@/libs/I18nRouting';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+// TODO: Cache Components adoption — needs user decision: redirecting by auth state inside Suspense would stream the redirect instead of sending an HTTP 307.
 export const instant = false;
 
 type IndexPageProps = {

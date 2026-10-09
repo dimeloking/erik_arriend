@@ -1,10 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
-import { TopBar } from '@/features/casero/components/TopBar';
-
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
+import { Suspense } from 'react';
+import { TopBar, TopBarFallback } from '@/features/casero/components/TopBar';
 
 export default async function DashboardLayout(props: {
   children: React.ReactNode;
@@ -15,7 +11,9 @@ export default async function DashboardLayout(props: {
 
   return (
     <div className="min-h-screen bg-cream-50">
-      <TopBar />
+      <Suspense fallback={<TopBarFallback />}>
+        <TopBar />
+      </Suspense>
       <main className="mx-auto max-w-6xl px-6 py-8">{props.children}</main>
     </div>
   );

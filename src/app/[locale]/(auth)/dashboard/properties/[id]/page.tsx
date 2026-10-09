@@ -4,11 +4,6 @@ import { notFound } from 'next/navigation';
 import { PropertyDetail } from '@/features/casero/components/PropertyDetail';
 import { getPropertyWithPayments } from '@/features/casero/queries';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 type PropertyPageProps = {
   params: Promise<{ locale: string; id: string }>;
   searchParams: Promise<{ paymentId?: string; tab?: string }>;
