@@ -11,7 +11,15 @@ const baseConfig: NextConfig = {
   },
   poweredByHeader: false,
   reactStrictMode: true,
-  reactCompiler: process.env.NODE_ENV === 'production', // Keep the development environment fast
+  // typedRoutes stays off: next-intl links omit the [locale] segment (as-needed prefix), so every href fails RouteImpl typing.
+  reactCompiler: true,
+  agentRules: false,
+  experimental: {
+    turbopackRustReactCompiler: true,
+    turbopackGc: true,
+    turbopackLazyDynamicImports: true,
+    agentUpgrade: 'latest',
+  },
   logging: {
     browserToTerminal: process.env.BROWSER_TO_TERMINAL_DISABLED !== 'true',
   },
