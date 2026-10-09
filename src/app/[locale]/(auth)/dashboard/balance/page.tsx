@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { getBalanceOverview } from '@/features/casero/balance-data';
 import { BalanceSnapshotCard } from '@/features/casero/components/BalanceSnapshotCard';
@@ -8,18 +7,11 @@ import { fmtCLP } from '@/features/casero/lib';
 import { Icon } from '@/features/casero/ui/Icon';
 import { Button, Card } from '@/features/casero/ui/primitives';
 
-type BalancePageProps = {
-  params: Promise<{ locale: string }>;
-};
-
 export const metadata: Metadata = {
   title: 'Casero — Balance general',
 };
 
-export default async function BalancePage(props: BalancePageProps) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default async function BalancePage() {
   const {
     snapshot,
     expenses,

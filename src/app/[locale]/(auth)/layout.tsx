@@ -1,5 +1,4 @@
 import { ClerkProvider } from '@clerk/nextjs';
-import { setRequestLocale } from 'next-intl/server';
 import { Env } from '@/libs/Env';
 import { ClerkLocalizations } from '@/utils/AppConfig';
 import { getI18nPath } from '@/utils/Helpers';
@@ -17,7 +16,6 @@ export default async function AuthLayout(props: {
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await props.params;
-  setRequestLocale(locale);
 
   const clerkLocale =
     ClerkLocalizations.supportedLocales[locale] ?? ClerkLocalizations.defaultLocale;

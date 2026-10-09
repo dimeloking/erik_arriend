@@ -1,16 +1,8 @@
-import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { CaseroLoadingScene } from '@/features/casero/components/CaseroLoadingScene';
 import { Icon } from '@/features/casero/ui/Icon';
 
-type Props = {
-  params: Promise<{ locale: string }>;
-};
-
-export default async function LoadingPreviewPage(props: Props) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default function LoadingPreviewPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-cream-50 p-10">
       <div className="mb-10 text-center">

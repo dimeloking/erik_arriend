@@ -1,11 +1,3 @@
-import { setRequestLocale } from 'next-intl/server';
-
-export default async function CenteredLayout(props: {
-  children: React.ReactNode;
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default function CenteredLayout(props: { children: React.ReactNode }) {
   return <>{props.children}</>;
 }

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PropertyForm } from '@/features/casero/components/PropertyForm';
@@ -8,7 +7,7 @@ import { Icon } from '@/features/casero/ui/Icon';
 import { Card } from '@/features/casero/ui/primitives';
 
 type EditPropertyPageProps = {
-  params: Promise<{ locale: string; id: string }>;
+  params: Promise<{ id: string }>;
 };
 
 export const metadata: Metadata = {
@@ -16,8 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function EditPropertyPage(props: EditPropertyPageProps) {
-  const { locale, id } = await props.params;
-  setRequestLocale(locale);
+  const { id } = await props.params;
 
   const property = await getPropertyWithPayments(id);
   if (!property) {

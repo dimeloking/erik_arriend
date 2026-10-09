@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { ExpensesDetail } from '@/features/casero/components/ExpensesDetail';
 import { listExpenses } from '@/features/casero/queries';
@@ -9,14 +8,7 @@ export const metadata: Metadata = {
   title: 'Casero — Historial de Gastos',
 };
 
-type PageProps = {
-  params: Promise<{ locale: string }>;
-};
-
-export default async function ExpensesPage(props: PageProps) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default async function ExpensesPage() {
   const expenses = await listExpenses();
 
   return (

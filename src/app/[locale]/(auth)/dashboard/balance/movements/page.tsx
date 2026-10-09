@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { getBalanceOverview } from '@/features/casero/balance-data';
 import { MovementsDetail } from '@/features/casero/components/MovementsDetail';
@@ -9,14 +8,7 @@ export const metadata: Metadata = {
   title: 'Casero — Historial de balance',
 };
 
-type PageProps = {
-  params: Promise<{ locale: string }>;
-};
-
-export default async function MovementsPage(props: PageProps) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default async function MovementsPage() {
   const { movements, snapshot } = await getBalanceOverview();
 
   return (

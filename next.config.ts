@@ -1,6 +1,6 @@
 import './src/libs/Env';
 import withBundleAnalyzer from '@next/bundle-analyzer';
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -61,11 +61,11 @@ if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
     // side errors will fail.
     tunnelRoute: '/monitoring',
 
-    webpack: {
-      reactComponentAnnotation: {
-        enabled: true,
-      },
+    reactComponentAnnotation: {
+      enabled: true,
+    },
 
+    webpack: {
       // Tree-shake Sentry logger statements to reduce bundle size
       treeshake: {
         removeDebugLogging: true,

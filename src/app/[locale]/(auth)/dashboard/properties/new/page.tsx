@@ -1,22 +1,14 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import { PropertyForm } from '@/features/casero/components/PropertyForm';
 import { Icon } from '@/features/casero/ui/Icon';
 import { Card } from '@/features/casero/ui/primitives';
 
-type NewPropertyPageProps = {
-  params: Promise<{ locale: string }>;
-};
-
 export const metadata: Metadata = {
   title: 'Casero — Nueva propiedad',
 };
 
-export default async function NewPropertyPage(props: NewPropertyPageProps) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default function NewPropertyPage() {
   return (
     <div className="mx-auto max-w-3xl animate-fade-up space-y-5">
       <Link

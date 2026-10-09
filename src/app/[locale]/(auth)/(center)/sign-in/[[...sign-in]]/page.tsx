@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { setRequestLocale } from 'next-intl/server';
 import { CustomSignInForm } from '@/features/casero/components/CustomSignInForm';
 import { Icon } from '@/features/casero/ui/Icon';
 import { getI18nPath } from '@/utils/Helpers';
@@ -18,7 +17,6 @@ export const metadata: Metadata = {
 
 export default async function SignInPage(props: SignInPageProps) {
   const { locale } = await props.params;
-  setRequestLocale(locale);
 
   return (
     <main className="min-h-screen px-6 py-8">

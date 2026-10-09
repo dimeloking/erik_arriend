@@ -1,14 +1,7 @@
-import { setRequestLocale } from 'next-intl/server';
 import { Suspense } from 'react';
 import { TopBar, TopBarFallback } from '@/features/casero/components/TopBar';
 
-export default async function DashboardLayout(props: {
-  children: React.ReactNode;
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await props.params;
-  setRequestLocale(locale);
-
+export default function DashboardLayout(props: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-cream-50">
       <Suspense fallback={<TopBarFallback />}>

@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
 import { DM_Sans, Fraunces, JetBrains_Mono } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { routing } from '@/libs/I18nRouting';
@@ -67,8 +66,6 @@ export default async function RootLayout(props: {
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
-
-  setRequestLocale(locale);
 
   return (
     <html
