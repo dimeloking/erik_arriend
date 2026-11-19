@@ -9,6 +9,8 @@ const config: KnipConfig = {
     'tests/**/*.ts',
     // Skills are read by AI agents at runtime, not imported in code
     '.agents/**',
+    '.claude/**',
+    '.continue/**',
     // Reference prototype kept for client onboarding (not part of build)
     'doc/**',
   ],
